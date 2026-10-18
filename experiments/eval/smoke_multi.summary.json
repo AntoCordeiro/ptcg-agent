@@ -1,0 +1,24 @@
+{
+ "games": 8,
+ "score": 0.625,
+ "ci95": [
+  0.3057378545838018,
+  0.863158240538479
+ ],
+ "elo": 88.73949984654253,
+ "elo_ci": [
+  -142.46970892063837,
+  319.9487086137236
+ ],
+ "W": 5,
+ "L": 3,
+ "D": 0,
+ "errors": 0,
+ "sprt_llr": 0.15209643128241043,
+ "sprt": "continue",
+ "sec_per_move_a": 0.24441352344949313,
+ "a": "mcts:experiments/train_exit2/last.pt:sims=64,worlds=1,multi_search=1",
+ "b": "mcts:experiments/train_exit2/last.pt:sims=64,worlds=1",
+ "deck_a": "decks/other_top.csv",
+ "deck_b": "decks/other_top.csv"
+}

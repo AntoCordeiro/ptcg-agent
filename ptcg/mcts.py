@@ -13,6 +13,7 @@ At each of our single-choice decisions with >= 2 options:
   3. sum root visit counts over worlds and play the most visited action.
 """
 import dataclasses
+import itertools
 import math
 import os
 import random
@@ -92,7 +93,7 @@ class MCTSAgent:
 
     def __init__(self, model, deck, sims=96, worlds=4, c_puct=1.25, belief="learned", time_budget=None,
                  max_chain=60, seed=None, device="cpu", library=None, use_overage=False, fpu=0.15, max_time=2.0, sample_temp=0.0,
-                 reserve=90.0, divisor=45.0, library_dir=None):
+                 reserve=90.0, divisor=45.0, library_dir=None, multi_search=0, multi_top=6, multi_max=24):
         self.model = model
         self.deck = list(deck)
         self.sims = sims
@@ -109,6 +110,9 @@ class MCTSAgent:
         self.fpu = fpu
         self.max_time = max_time
         self.reserve = reserve
+        self.multi_search = multi_search
+        self.multi_top = multi_top
+        self.multi_max = multi_max
         self.divisor = divisor
         self.sample_temp = sample_temp
         self.last_pi = None
@@ -250,7 +254,8 @@ class MCTSAgent:
             child = node.children.get(a)
             if child is None:
                 try:
-                    st = api.search_step(node.sid, [a])
+                    sel_list = node.actions[a] if node.actions is not None else [a]
+                    st = api.search_step(node.sid, sel_list)
                     child = Node(st.searchId, obs_to_dict(st.observation))
                     child = self._advance(child)
                 except Exception:
@@ -291,6 +296,63 @@ class MCTSAgent:
                 self._backup(path, v, leaf.to_move)
         return len(roots)
 
+
+    def _combos(self, obs, p, count_ratio):
+        """Candidate selections for a multi-select / optional decision, with priors."""
+        sel = obs["select"]
+        kmin, kmax = int(sel["minCount"]), int(sel["maxCount"])
+        n = len(p)
+        greedy = tuple(policy_choice(obs, p, count_ratio, greedy=True))
+        top = [int(i) for i in np.argsort(-p)[:min(n, self.multi_top)]]
+        kstar = kmin + count_ratio * (kmax - kmin)
+        cands = {}
+        for k in range(kmin, min(kmax, 3) + 1):
+            for c in itertools.combinations(sorted(top), k):
+                lp = float(np.mean(np.log(p[list(c)] + 1e-9))) if k > 0 else float(np.log(1.0 - p.max() + 1e-3))
+                cands[c] = lp - 0.7 * abs(k - kstar)
+        if greedy not in cands:
+            cands[greedy] = max(cands.values()) + 0.1 if cands else 0.0
+        items = sorted(cands.items(), key=lambda kv: -kv[1])[:self.multi_max]
+        if greedy not in dict(items):
+            items[-1] = (greedy, cands[greedy])
+        acts = [list(c) for c, _ in items]
+        pri = np.array([v for _, v in items], np.float64)
+        pri = np.exp(pri - pri.max()); pri /= pri.sum()
+        return acts, pri
+
+    def _search_root(self, obs, acts, pri, v, bel):
+        """MCTS where the root actions are explicit selection lists."""
+        t0 = time.time()
+        budget = self._budget(obs)
+        m = len(acts)
+        total = np.zeros(m)
+        try:
+            roots = []
+            for w in range(self.worlds):
+                yd, yp, od, opz, oh, oa = self.sample_world(obs, bel)
+                st = api.search_begin(api.to_observation_class(obs), yd, yp, od, opz, oh, oa)
+                r = Node(st.searchId, obs_to_dict(st.observation))
+                r.P, r.N, r.W, r.value, r.actions = pri.copy(), np.zeros(m), np.zeros(m), v, acts
+                roots.append(r)
+            i = 0
+            while True:
+                i += self._round(roots)
+                if (budget is not None and (time.time() - t0 > budget or i >= self.sims)) or (budget is None and i >= self.sims):
+                    break
+            for r in roots:
+                total += r.N
+        except Exception as e:
+            self.stats["search_error"] += 1
+        finally:
+            try:
+                api.search_end()
+            except Exception:
+                pass
+        self.stats["multi_searches"] += 1
+        if total.sum() <= 0:
+            return None
+        return acts[int(np.argmax(total + 1e-6 * pri))]
+
     # ------------------------------------------------------------------ act
     def _budget(self, obs):
         if self.use_overage:
@@ -310,6 +372,12 @@ class MCTSAgent:
         self.last_pi = None
         p, v, c, bel, _ = net_eval(self.model, [obs], self.device)[0]
         if not (sel["minCount"] == 1 and sel["maxCount"] == 1 and n >= 2) or obs.get("search_begin_input") is None:
+            if self.multi_search and obs.get("search_begin_input") is not None and n >= 2 and sel["maxCount"] >= 1:
+                acts, pri = self._combos(obs, p, c)
+                if len(acts) >= 2:
+                    best = self._search_root(obs, acts, pri, v, bel)
+                    if best is not None:
+                        return sorted(int(x) for x in best)
             return policy_choice(obs, p, c, greedy=True)
         t0 = time.time()
         budget = self._budget(obs)

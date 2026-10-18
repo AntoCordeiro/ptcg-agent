@@ -57,6 +57,9 @@ Head-to-head (mirror, Crustle vs Crustle):
 | deployed (time bank), 1 world vs 4 worlds (run 1) | 200 | 0.558 [0.488, 0.625] | +40 [−8, +88] |
 | deployed (time bank), 1 world vs 4 worlds (run 2) | 200 | 0.575 [0.506, 0.641] | +53 [+4, +101] |
 | **deployed, 1 vs 4 worlds, pooled** | **400** | **0.566** [0.517, 0.614] | **+46** |
+| MCTS-64 with root search over k-of-n card combinations vs policy-greedy k-of-n | 400 | 0.483 [0.434, 0.531] | −12 [−46, +22] |
+| MCTS-64 c_puct 0.7 vs 1.25 | 240 | 0.513 [0.450, 0.575] | +9 [−35, +53] |
+| MCTS-64 c_puct 2.5 vs 1.25 | 240 | **0.431** [0.370, 0.495] | **−48** [−92, −4], SPRT H0 |
 
 Seed robustness of the search gain (seed-1 network, Crustle vs pool): policy 0.792 [0.736, 0.838] → MCTS-64 0.850 [0.799, 0.890]
 (seed 0: 0.750 → 0.802).
@@ -101,8 +104,8 @@ without improving the raw policy — the network moves away from human imitation
 | 1 | `submission/sub1_mcts_crustle.tar.gz` | value-FT net + MCTS (4 worlds, ≤2 s/decision) + Crustle | **~737** (after ~10 h) |
 | 2 | `submission/sub2_mcts_ogerpon.tar.gz` | same agent + Teal Mask Ogerpon deck | (optional) |
 | 3 | `submission/sub3_mcts1w_crustle.tar.gz` | value-FT net + MCTS **1 world** (≤2 s/decision) + Crustle | **~768** (after ~10 h) |
-| 4 | `submission/sub4_exit2_1w_crustle.tar.gz` | ExIt-2 net + MCTS 1 world + Crustle | **~770** (after ~2 h) — deployed h2h vs sub3 config: 0.515 [0.446, 0.583], 200 games |
-| 5 | `submission/sub5_exit2_1w_3s_lib.tar.gz` | sub4 + time cap 3 s (reserve 60 s, divisor 60) + 120-deck opponent library | h2h vs sub4 config: 0.538 [0.460, 0.613], +26 Elo, 160 games; mean 185 s / max 300 s thinking per game; ladder ~653 after 1 h (still rating) |
+| 4 | `submission/sub4_exit2_1w_crustle.tar.gz` | ExIt-2 net + MCTS 1 world + Crustle | **~759** (69 ladder eps, score 0.551) — deployed h2h vs sub3 config: 0.515 [0.446, 0.583], 200 games |
+| 5 | `submission/sub5_exit2_1w_3s_lib.tar.gz` | sub4 + time cap 3 s (reserve 60 s, divisor 60) + 120-deck opponent library | h2h vs sub4 config: 0.538 [0.460, 0.613], +26 Elo, 160 games; mean 185 s / max 300 s thinking per game; ladder **~794** after ~4 h (52 eps, score 0.654, min bank left 334 s) |
 
 Previous system on the same ladder: 650+ (best legacy) / ~500 (latest legacy).
 Local prediction vs ladder: 1 world > 4 worlds locally (+46 Elo, 400 games) and on the ladder (775 vs 750) —
@@ -114,3 +117,5 @@ unlike the legacy evaluation, which ranked the two legacy agents in the wrong or
   game boundary); with a 2 s cap we used ~350 s per match and never went below ~400 s remaining.
 - Score by opponent rating: 600s 0.78 (36 eps), 700s 0.48 (81), 800s 0.36 (25), 900+ 0.00 (7).
 - Many ladder opponents play decks outside our 8-deck library -> library expanded to 120 mined decklists (sub5).
+- sub4/sub5 forensics (121 more ladder episodes): no errors/timeouts from our agent (INVALIDs are a broken opponent bot);
+  sub5 scores 0.654 overall and 0.50 vs 800-rated opponents (sub4: 0.551 / 0.59).

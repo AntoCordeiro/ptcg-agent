@@ -31,7 +31,7 @@
 \printAffiliationsAndNotice{}
 
 \begin{abstract}
-We build an agent for the Kaggle \emph{Pok\'emon TCG AI Battle Challenge}, a stochastic, imperfect-information card game with variable action sets. A 2.6M-parameter entity/option transformer is trained on 453k expert decisions with policy, value and opponent-hand (belief) heads; its value head is re-trained on self-play outcomes, and it guides a determinized Monte Carlo tree search on the exact game simulator. Under a rigorous protocol (held-out games, a fixed six-opponent gauntlet, 95\% Wilson intervals, SPRT), search raises the score against the gauntlet from 0.75 to 0.90 and the ladder rating from 650 (our previous system) to $\approx$770. A learned belief model predicts hidden cards better than counting (AUROC 0.75 vs 0.71) yet does not improve play: at our budgets one deep search tree beats averaging several shallow determinized trees.
+We build an agent for the Kaggle \emph{Pok\'emon TCG AI Battle Challenge}, a stochastic, imperfect-information card game with variable action sets. A 2.6M-parameter entity/option transformer is trained on 453k expert decisions with policy, value and opponent-hand (belief) heads; its value head is re-trained on self-play outcomes, and it guides a determinized Monte Carlo tree search on the exact game simulator. Under a rigorous protocol (held-out games, a fixed six-opponent gauntlet, 95\% Wilson intervals, SPRT), search raises the score against the gauntlet from 0.75 to 0.90 and the ladder rating from 650 (our previous system) to $\approx$790. A learned belief model predicts hidden cards better than counting (AUROC 0.75 vs 0.71) yet does not improve play: at our budgets one deep search tree beats averaging several shallow determinized trees.
 \end{abstract}
 
 % ------------------------------------------------------------------------------
@@ -74,6 +74,7 @@ learned vs count-based hand sampling (400) & .48 [.43, .53] \\
 deployed: 1 vs 4 worlds (400) & .57 [.52, .61] \\
 ExIt-2 + MCTS vs base + MCTS (300) & .57 [.51, .62] \\
 ExIt-3 + MCTS vs ExIt-2 + MCTS (300) & .50 [.45, .56] \\
+searching $k$-of-$n$ choices vs policy (400) & .48 [.43, .53] \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -94,13 +95,13 @@ ExIt-3 + MCTS vs ExIt-2 + MCTS (300) & .50 [.45, .56] \\
 
 \paragraph*{Deck choice.} Piloted by our policy, the deck that dominates top-rated replays (Dragapult, 57\% win rate there) scores only 0.49 against the gauntlet, while a Kangaskhan/Crustle deck scores 0.73 (240 games each): the best deck for an agent depends on the agent.
 
-\paragraph*{Search.} Search is the main source of strength (Fig.~\ref{fig:scaling}): 0.75 for the raw policy, 0.87 at 256 simulations, 0.90 for the deployed agent (0.93 against a reconstruction of our previous best Kaggle agent), reproduced on a second seed. Surprisingly, the learned belief gives no measurable gain when used to sample hands, and splitting a fixed budget over four determinizations is \emph{worse} than one deep tree ($-75$ Elo): at these depths the tree rarely reaches situations where the opponent's exact hand matters. ExIt with 64-simulation targets does not change the raw policy (0.50) but makes the search stronger (+49 Elo), while ExIt with noisy 16-simulation targets did not help and a third round brought no further gain (0.50).
+\paragraph*{Search.} Search is the main source of strength (Fig.~\ref{fig:scaling}): 0.75 for the raw policy, 0.87 at 256 simulations, 0.90 for the deployed agent (0.93 against a reconstruction of our previous best Kaggle agent), reproduced on a second seed. Surprisingly, the learned belief gives no measurable gain when used to sample hands, and splitting a fixed budget over four determinizations is \emph{worse} than one deep tree ($-75$ Elo): at these depths the tree rarely reaches situations where the opponent's exact hand matters. ExIt with 64-simulation targets does not change the raw policy (0.50) but makes the search stronger (+49 Elo), while ExIt with noisy 16-simulation targets did not help and a third round brought no further gain (0.50). Extending search to $k$-of-$n$ card choices did not help either (0.48).
 
-\paragraph*{Ladder.} Our previous agents sit at 650 and 500. The new agent rated $\approx$737 (4 worlds) and $\approx$768 (1 world) after 10 hours, and the ExIt-2 version reached $\approx$770 within 2 hours. Unlike the old protocol, the local ranking (1 world $>$ 4 worlds) matches the ladder.
+\paragraph*{Ladder.} Our previous agents sit at 650 and 500. The new agent rated $\approx$737 (4 worlds) and $\approx$768 (1 world) after 10 hours; adding the ExIt-2 network, a 3\,s cap and a 120-deck opponent library reached $\approx$794 after 4 hours (score 0.65 over 52 matches), our best. Unlike the old protocol, the local ranking (1 world $>$ 4 worlds) matches the ladder.
 
 % ------------------------------------------------------------------------------
 \section{Discussion and conclusions}
-A small imitation network is a good prior, but the gains come from looking ahead with the real game engine; more thinking time keeps helping. Better hidden-information modelling helps prediction but not play at our search depth, a negative result we confirmed with two budgets and an ablation on the number of worlds. Limitations: four of six gauntlet opponents share our network, ladder ratings are still converging, and expert iteration plateaued after two useful rounds at our compute. Next steps are more ExIt rounds with deeper targets and information-set search that shares statistics across worlds.
+A small imitation network is a good prior, but the gains come from looking ahead with the real game engine. Better hidden-information modelling helps prediction but not play at our search depth, a negative result we confirmed with two budgets and an ablation on the number of worlds. Limitations: four of six gauntlet opponents share our network, ladder ratings are still converging, and expert iteration plateaued after two useful rounds at our compute.
 
 % ------------------------------------------------------------------------------
 \section{Statement on the use of AI}\label{sec:ai}
@@ -108,5 +109,47 @@ I used an AI assistant (Claude, Anthropic) extensively throughout the project, a
 
 \bibliography{references.bib}
 \bibliographystyle{dlaiml2026}
+
+\clearpage
+\appendix
+\section*{Appendix: additional results}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.48\linewidth]{figures/belief_auroc.png}\hfill
+\includegraphics[width=0.40\linewidth]{figures/value_calibration.png}
+\caption{Left: opponent-hand prediction AUROC on held-out games. Right: value calibration on held-out replay games before and after self-play fine-tuning (Brier .254 $\rightarrow$ .226).}
+\end{figure}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/training_curves.png}
+\caption{Validation curves with and without the auxiliary belief head (no effect on the policy).}
+\end{figure}
+\begin{table}[h]
+\caption{Additional ablations (Crustle mirror, MCTS-64, 1 world; score of A vs B, 95\% CI).}
+\begin{center}\begin{small}
+\begin{tabular}{@{}lr@{}}
+\toprule
+$c_{\text{puct}}=0.7$ vs $1.25$ (240 games) & .51 [.45, .58] \\
+$c_{\text{puct}}=2.5$ vs $1.25$ (240 games) & .43 [.37, .49] \\
+deployed: 3\,s cap + 120-deck library vs 2\,s, 8 decks (160) & .54 [.46, .61] \\
+\bottomrule
+\end{tabular}
+\end{small}\end{center}
+\end{table}
+\begin{table}[h]
+\caption{Deck selection: our policy piloting each deck against the gauntlet (240 games each).}
+\begin{center}\begin{small}
+\begin{tabular}{@{}lr@{}}
+\toprule
+Mega Kangaskhan ex / Crustle & .73 [.67, .78] \\
+Teal Mask Ogerpon ex & .65 [.59, .71] \\
+Hydrapple ex & .64 [.58, .70] \\
+Marnie's Grimmsnarl ex & .59 [.53, .65] \\
+Dragapult ex & .49 [.43, .56] \\
+Lillie's Clefairy ex & .28 [.23, .34] \\
+\bottomrule
+\end{tabular}
+\end{small}\end{center}
+\end{table}
 
 \end{document}
