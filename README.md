@@ -24,7 +24,7 @@ tools/           deck statistics, simulator benchmark, debugging scripts
 tests/           regression tests
 jobs/            file-based job runner (runs jobs on the Windows GPU machine)
 baselines/       legacy submissions used as fixed opponents
-_archive/        previous code base (reference only)
+gen1/            first-generation code and benchmark results (report Sec. 2)
 experiments/     logs, metrics, gauntlet results, figures
 ```
 

@@ -1,0 +1,56 @@
+{
+  "agents": [
+    "heuristic",
+    "search"
+  ],
+  "elo": {
+    "heuristic": 0.0,
+    "search": 0.0
+  },
+  "elo_ci95": {
+    "heuristic": [
+      -139.79400086720378,
+      139.79400086720378
+    ],
+    "search": [
+      -139.79400086720378,
+      139.79400086720378
+    ]
+  },
+  "winrate_matrix_pct": [
+    [
+      -1.0,
+      50.0
+    ],
+    [
+      50.0,
+      -1.0
+    ]
+  ],
+  "games_matrix": [
+    [
+      0,
+      2
+    ],
+    [
+      2,
+      0
+    ]
+  ],
+  "n_games": 2,
+  "n_timeouts": 0,
+  "n_crashes": 0,
+  "crash_examples": [],
+  "first_player_win_pct": 50.0,
+  "avg_steps": 72.0,
+  "anchor_results": {
+    "search_vs_heuristic": {
+      "win_pct": 50.0,
+      "ci95": [
+        9.453120573423075,
+        90.54687942657694
+      ],
+      "n": 2
+    }
+  }
+}

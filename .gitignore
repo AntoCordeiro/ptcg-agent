@@ -32,3 +32,8 @@ report/*.blg
 report/*.out
 # local copy of the course template
 template/
+# planning notes (not part of the deliverable)
+PLAN.md
+PLAN_FULL.md
+REPORT_OUTLINE.md
+notes/

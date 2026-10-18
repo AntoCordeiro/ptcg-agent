@@ -1,0 +1,61 @@
+{
+  "winner": "wise_60iql3_25sp_15v2",
+  "best_wr_pct": 56.25,
+  "candidates": [
+    {
+      "tag": "iql_v3_pure",
+      "weights": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "wr_champ_pct": 56.25,
+      "wr_grimm_pct": 43.75,
+      "combined_wr_pct": 50.0
+    },
+    {
+      "tag": "sp_v3_pure",
+      "weights": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "wr_champ_pct": 43.75,
+      "wr_grimm_pct": 43.75,
+      "combined_wr_pct": 43.75
+    },
+    {
+      "tag": "wise_60iql3_25sp_15v2",
+      "weights": [
+        0.6,
+        0.25,
+        0.15
+      ],
+      "wr_champ_pct": 68.75,
+      "wr_grimm_pct": 43.75,
+      "combined_wr_pct": 56.25
+    },
+    {
+      "tag": "wise_50iql3_30sp_20v2",
+      "weights": [
+        0.5,
+        0.3,
+        0.2
+      ],
+      "wr_champ_pct": 56.25,
+      "wr_grimm_pct": 43.75,
+      "combined_wr_pct": 50.0
+    },
+    {
+      "tag": "wise_45iql3_20sp_35v2",
+      "weights": [
+        0.45,
+        0.2,
+        0.35
+      ],
+      "wr_champ_pct": 62.5,
+      "wr_grimm_pct": 37.5,
+      "combined_wr_pct": 50.0
+    }
+  ]
+}

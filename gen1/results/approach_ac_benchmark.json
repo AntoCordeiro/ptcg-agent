@@ -1,0 +1,351 @@
+{
+  "agent_names": [
+    "search_v4",
+    "wise_v3",
+    "selfplay_v3",
+    "iql_v3",
+    "iql_rel",
+    "wise",
+    "bc",
+    "heuristic",
+    "old_submission"
+  ],
+  "games_per_pair": 20,
+  "elapsed_sec": 361.0,
+  "elo_ratings": {
+    "selfplay_v3": 180.49,
+    "search_v4": 120.66,
+    "wise_v3": 120.66,
+    "iql_v3": 116.15,
+    "iql_rel": 111.64,
+    "bc": 107.14,
+    "wise": 43.97,
+    "heuristic": -296.14,
+    "old_submission": -504.57
+  },
+  "new_submission_vs_rebuild_v1": {
+    "wr_pct": 80.0,
+    "wins": 32,
+    "losses": 8,
+    "draws": 0
+  },
+  "pair_results": {
+    "search_v4_vs_wise_v3": {
+      "wr_pct": 55.0,
+      "wins_a": 11,
+      "wins_b": 9,
+      "draws": 0
+    },
+    "search_v4_vs_selfplay_v3": {
+      "wr_pct": 55.0,
+      "wins_a": 11,
+      "wins_b": 9,
+      "draws": 0
+    },
+    "search_v4_vs_iql_v3": {
+      "wr_pct": 45.0,
+      "wins_a": 9,
+      "wins_b": 11,
+      "draws": 0
+    },
+    "search_v4_vs_iql_rel": {
+      "wr_pct": 65.0,
+      "wins_a": 13,
+      "wins_b": 7,
+      "draws": 0
+    },
+    "search_v4_vs_wise": {
+      "wr_pct": 45.0,
+      "wins_a": 9,
+      "wins_b": 11,
+      "draws": 0
+    },
+    "search_v4_vs_bc": {
+      "wr_pct": 45.0,
+      "wins_a": 9,
+      "wins_b": 11,
+      "draws": 0
+    },
+    "search_v4_vs_heuristic": {
+      "wr_pct": 95.0,
+      "wins_a": 19,
+      "wins_b": 1,
+      "draws": 0
+    },
+    "search_v4_vs_old_submission": {
+      "wr_pct": 95.0,
+      "wins_a": 19,
+      "wins_b": 1,
+      "draws": 0
+    },
+    "wise_v3_vs_selfplay_v3": {
+      "wr_pct": 40.0,
+      "wins_a": 8,
+      "wins_b": 12,
+      "draws": 0
+    },
+    "wise_v3_vs_iql_v3": {
+      "wr_pct": 60.0,
+      "wins_a": 12,
+      "wins_b": 8,
+      "draws": 0
+    },
+    "wise_v3_vs_iql_rel": {
+      "wr_pct": 35.0,
+      "wins_a": 7,
+      "wins_b": 13,
+      "draws": 0
+    },
+    "wise_v3_vs_wise": {
+      "wr_pct": 75.0,
+      "wins_a": 15,
+      "wins_b": 5,
+      "draws": 0
+    },
+    "wise_v3_vs_bc": {
+      "wr_pct": 45.0,
+      "wins_a": 9,
+      "wins_b": 11,
+      "draws": 0
+    },
+    "wise_v3_vs_heuristic": {
+      "wr_pct": 100.0,
+      "wins_a": 20,
+      "wins_b": 0,
+      "draws": 0
+    },
+    "wise_v3_vs_old_submission": {
+      "wr_pct": 100.0,
+      "wins_a": 20,
+      "wins_b": 0,
+      "draws": 0
+    },
+    "selfplay_v3_vs_iql_v3": {
+      "wr_pct": 80.0,
+      "wins_a": 16,
+      "wins_b": 4,
+      "draws": 0
+    },
+    "selfplay_v3_vs_iql_rel": {
+      "wr_pct": 70.0,
+      "wins_a": 14,
+      "wins_b": 6,
+      "draws": 0
+    },
+    "selfplay_v3_vs_wise": {
+      "wr_pct": 70.0,
+      "wins_a": 14,
+      "wins_b": 6,
+      "draws": 0
+    },
+    "selfplay_v3_vs_bc": {
+      "wr_pct": 50.0,
+      "wins_a": 10,
+      "wins_b": 10,
+      "draws": 0
+    },
+    "selfplay_v3_vs_heuristic": {
+      "wr_pct": 90.0,
+      "wins_a": 18,
+      "wins_b": 2,
+      "draws": 0
+    },
+    "selfplay_v3_vs_old_submission": {
+      "wr_pct": 100.0,
+      "wins_a": 20,
+      "wins_b": 0,
+      "draws": 0
+    },
+    "iql_v3_vs_iql_rel": {
+      "wr_pct": 60.0,
+      "wins_a": 12,
+      "wins_b": 8,
+      "draws": 0
+    },
+    "iql_v3_vs_wise": {
+      "wr_pct": 65.0,
+      "wins_a": 13,
+      "wins_b": 7,
+      "draws": 0
+    },
+    "iql_v3_vs_bc": {
+      "wr_pct": 65.0,
+      "wins_a": 13,
+      "wins_b": 7,
+      "draws": 0
+    },
+    "iql_v3_vs_heuristic": {
+      "wr_pct": 95.0,
+      "wins_a": 19,
+      "wins_b": 1,
+      "draws": 0
+    },
+    "iql_v3_vs_old_submission": {
+      "wr_pct": 95.0,
+      "wins_a": 19,
+      "wins_b": 1,
+      "draws": 0
+    },
+    "iql_rel_vs_wise": {
+      "wr_pct": 80.0,
+      "wins_a": 16,
+      "wins_b": 4,
+      "draws": 0
+    },
+    "iql_rel_vs_bc": {
+      "wr_pct": 45.0,
+      "wins_a": 9,
+      "wins_b": 11,
+      "draws": 0
+    },
+    "iql_rel_vs_heuristic": {
+      "wr_pct": 95.0,
+      "wins_a": 19,
+      "wins_b": 1,
+      "draws": 0
+    },
+    "iql_rel_vs_old_submission": {
+      "wr_pct": 100.0,
+      "wins_a": 20,
+      "wins_b": 0,
+      "draws": 0
+    },
+    "wise_vs_bc": {
+      "wr_pct": 55.0,
+      "wins_a": 11,
+      "wins_b": 9,
+      "draws": 0
+    },
+    "wise_vs_heuristic": {
+      "wr_pct": 95.0,
+      "wins_a": 19,
+      "wins_b": 1,
+      "draws": 0
+    },
+    "wise_vs_old_submission": {
+      "wr_pct": 100.0,
+      "wins_a": 20,
+      "wins_b": 0,
+      "draws": 0
+    },
+    "bc_vs_heuristic": {
+      "wr_pct": 90.0,
+      "wins_a": 18,
+      "wins_b": 2,
+      "draws": 0
+    },
+    "bc_vs_old_submission": {
+      "wr_pct": 100.0,
+      "wins_a": 20,
+      "wins_b": 0,
+      "draws": 0
+    },
+    "heuristic_vs_old_submission": {
+      "wr_pct": 85.0,
+      "wins_a": 17,
+      "wins_b": 3,
+      "draws": 0
+    }
+  },
+  "win_matrix": [
+    [
+      0.0,
+      0.55,
+      0.55,
+      0.45,
+      0.65,
+      0.45,
+      0.45,
+      0.95,
+      0.95
+    ],
+    [
+      0.45,
+      0.0,
+      0.4,
+      0.6,
+      0.35,
+      0.75,
+      0.45,
+      1.0,
+      1.0
+    ],
+    [
+      0.45,
+      0.6,
+      0.0,
+      0.8,
+      0.7,
+      0.7,
+      0.5,
+      0.9,
+      1.0
+    ],
+    [
+      0.55,
+      0.4,
+      0.2,
+      0.0,
+      0.6,
+      0.65,
+      0.65,
+      0.95,
+      0.95
+    ],
+    [
+      0.35,
+      0.65,
+      0.3,
+      0.4,
+      0.0,
+      0.8,
+      0.45,
+      0.95,
+      1.0
+    ],
+    [
+      0.55,
+      0.25,
+      0.3,
+      0.35,
+      0.2,
+      0.0,
+      0.55,
+      0.95,
+      1.0
+    ],
+    [
+      0.55,
+      0.55,
+      0.5,
+      0.35,
+      0.55,
+      0.45,
+      0.0,
+      0.9,
+      1.0
+    ],
+    [
+      0.05,
+      0.0,
+      0.1,
+      0.05,
+      0.05,
+      0.05,
+      0.1,
+      0.0,
+      0.85
+    ],
+    [
+      0.05,
+      0.0,
+      0.0,
+      0.05,
+      0.0,
+      0.0,
+      0.0,
+      0.15,
+      0.0
+    ]
+  ]
+}
