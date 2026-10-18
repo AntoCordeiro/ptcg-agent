@@ -88,7 +88,7 @@ Gauntlet: policy / + MCTS & \multicolumn{3}{r}{.75 [.69,.80] / .90 [.85,.94]} \\
 
 \paragraph*{Search.} A head-to-head score $s$ is the fraction of games agent A wins against agent B (.50: equal strength). Search raises the gauntlet score from .75 to .90 (Tab.~\ref{tab:gen}), and the search agent beats its own policy with $s{=}.59$ (+65 Elo). Depth matters more than accurate hidden cards: belief-weighted against uniform hand sampling scores .48 (no difference), and four worlds with a quarter of the simulations each score .39 ($-75$ Elo) against one deeper search. With expert iteration (64-simulation targets) the search agent scores .57 (+49 Elo) against its predecessor while the raw policies tie (.50), so the network learned priors for search, not imitation. A third round or a 6\,s cap did not help.
 
-\paragraph*{Kaggle leaderboard.} Ratings $\mu$ \cite{herbrich2006trueskill} (start 600) are the values each submission stabilised at. DualCross reached 647.7 (weight average) and 498.0 (one-step search). PTCGNet reached $\approx$737 with four worlds and $\approx$768 with one, as predicted locally; the best (one world, expert iteration) stabilised at 773.2, 154th of 432.
+\paragraph*{Kaggle leaderboard.} Ratings $\mu$ \cite{herbrich2006trueskill} (start 600) are the values each submission stabilised at. DualCross reached 647.7 (weight average) and 498.0 (one-step search). PTCGNet reached 736.6 with four worlds and 768.4 with one, as predicted locally; the best (one world, expert iteration) stabilised at 773.2, 154th of 432.
 
 % ------------------------------------------------------------------------------
 \section{Discussion and conclusions}
