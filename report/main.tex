@@ -31,12 +31,12 @@
 \printAffiliationsAndNotice{}
 
 \begin{abstract}
-This work studies agents for the Kaggle \emph{PTCG AI Battle Challenge} (Pok\'emon Trading Card Game). A first agent, \emph{DualCross}, imitates top-rated players with a transformer refined by reinforcement learning; it matches 63\% of expert decisions but rates only 650 on the Kaggle leaderboard. A second agent, \emph{PTCGNet}, uses a smaller network to guide a Monte Carlo tree search on the game simulator. Search raises the fraction of games won against six fixed opponents from 0.75 to 0.90, and the best submission scores 757.5, 166th of 432 participants. Predicting the opponent's hand beats card counting but does not help the search.
+This work studies agents for the Kaggle \emph{PTCG AI Battle Challenge} (Pok\'emon Trading Card Game). A first agent, \emph{DualCross}, imitates top-rated players with a transformer refined by reinforcement learning; it matches 63\% of expert decisions but rates only 648 on the Kaggle leaderboard. A second agent, \emph{PTCGNet}, uses a smaller network to guide a Monte Carlo tree search on the game simulator. Search raises the fraction of games won against six fixed opponents from 0.75 to 0.90, and the best submission rates 773.2, 154th of 432 participants. Predicting the opponent's hand beats card counting but does not help the search.
 \end{abstract}
 
 % ------------------------------------------------------------------------------
 \section{Introduction}
-In the Pok\'emon Trading Card Game (PTCG) two players with 60-card decks knock out each other's Pok\'emon; six knock-outs win. On Kaggle, agents play rated best-of-three matches; at each decision an agent sees its own view of the game and a list of legal options (play a card, attach energy, attack, choose $k$ of $n$ cards, \dots) and returns the chosen ones.
+In the Pok\'emon Trading Card Game (PTCG) two players with 60-card decks knock out each other's Pok\'emon; six knock-outs win. On Kaggle, agents play rated best-of-three matches; at each decision an agent sees its own view and the legal options (play a card, attach energy, attack, choose $k$ of $n$ cards, \dots) and returns its choice.
 
 The task combines \emph{hidden information} (the opponent's hand and both deck orders), \emph{stochasticity} (shuffled decks, random card effects) and a \emph{variable action space}: the options change at every decision, ruling out a fixed output layer. Kaggle gives 5k replays of top games and a simulator that implements every card effect and can continue a game from any state once the hidden cards are fixed; each agent has 600\,s of thinking time per game.
 
@@ -51,9 +51,9 @@ The replays are games between the agents of other challenge participants. The 75
 
 % ------------------------------------------------------------------------------
 \section{PTCGNet: network-guided search}\label{sec:gen2}
-\paragraph*{Network.} PTCGNet drops hand-crafted features: a card token sums a card-identity embedding (a trainable vector per card, learned with the rest of the network), the card's static attributes from the simulator database and dynamic values such as HP and damage. An option token encodes the option type plus the embeddings of the card it acts on and of its target, so each option contains the cards it involves before any attention (Appendix~B). The tokens enter a 4-layer transformer encoder with layer normalisation before each sub-layer (pre-norm). Four heads follow: \emph{policy} (a score per option), \emph{value} (win probability), \emph{count} (how many cards to take when a decision allows $k_{\min}$ to $k_{\max}$) and \emph{belief} (per card, the probability that it is in the opponent's hand). The opponent's true hand, stored in replays, is only a training label; the input is always the acting player's view.
+\paragraph*{Network.} PTCGNet drops hand-crafted features: a card token sums a card-identity embedding (a trainable vector per card), the card's static attributes from the simulator database and dynamic values such as HP and damage. An option token encodes the option type plus the embeddings of the card it acts on and of its target, so each option contains the cards it involves before any attention (Appendix~B). The tokens enter a 4-layer transformer encoder with layer normalisation before each sub-layer (pre-norm). Four heads follow: \emph{policy} (a score per option), \emph{value} (win probability), \emph{count} (how many cards to take when a decision allows $k_{\min}$ to $k_{\max}$) and \emph{belief} (per card, the probability that it is in the opponent's hand). The opponent's true hand, stored in replays, is only a training label; the input is always the acting player's view.
 
-The network was trained on 453k decisions from the 3{,}000 best-rated replays, split 90/5/5 by game, so the $\approx$20k validation and test decisions come from unseen games. Trained on replays, the value head memorised the 2.7k training outcomes and did worse than a constant, so, as in AlphaGo, it was fine-tuned on the outcomes of 8k games of the network against itself, while the policy kept training on replays.
+The network was trained on 453k decisions from the 3{,}000 best-rated replays, split 90/5/5 by game, so the $\approx$20k validation and test decisions come from unseen games. The value head overfitted the 2.7k training games, so, as in AlphaGo, it was fine-tuned on 8k self-play games while the policy kept training on replays.
 
 \paragraph*{Search.} At each decision with two or more options the agent samples a \emph{world}, an assignment of all hidden cards consistent with its view: its unseen cards are shuffled into deck and prizes, the opponent's decklist is the closest of 120 replay decklists to its visible cards, and its hand is drawn from the rest, uniformly or weighted by the belief head. The simulator then searches this world for both players, modelling the opponent with the same network. Each simulation descends the tree by the PUCT rule, favouring options the policy rates likely (high prior) or whose continuations scored well, and scores the new position with the value head rather than playing to the end, costly and noisy. The search stops when the time given to the decision, a share of the remaining time bank (Appendix~D), runs out, and the most visited option is played. Expert iteration then retrains the policy on the visit distributions of search self-play.
 
@@ -74,10 +74,7 @@ Network & top-1 & Brier & AUROC \\
 DualCross, BC & 63.3\% & -- & -- \\
 PTCGNet (+ self-play value) & 70.0\% & .254 (.226) & .752 \\
 \midrule
-PTCGNet agent & \multicolumn{3}{r}{gauntlet score} \\
-policy only & \multicolumn{3}{r}{.75 [.69, .80]} \\
-MCTS, 256 simulations & \multicolumn{3}{r}{.87 [.83, .91]} \\
-MCTS, time bank (deployed) & \multicolumn{3}{r}{.90 [.85, .94]} \\
+Gauntlet: policy / + MCTS & \multicolumn{3}{r}{.75 [.69,.80] / .90 [.85,.94]} \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -85,17 +82,17 @@ MCTS, time bank (deployed) & \multicolumn{3}{r}{.90 [.85, .94]} \\
 \vspace{-0.4cm}
 \end{table}
 
-\paragraph*{Networks.} DualCross agrees with the expert on 63.3\% of held-out decisions; IQL, PPO and weight averaging did not change it significantly. PTCGNet reaches 70.0\% (random: 21.7\%). Self-play makes the value beat a constant (Brier .249), and the belief reaches AUROC .752, against .711 for counting the opponent's unseen cards. Piloted by the policy, Crustle scored .73 on the gauntlet and Dragapult, the most common top deck, .49 (App.~C).
+\paragraph*{Networks.} DualCross matches 63.3\% of held-out expert decisions; IQL, PPO and weight averaging did not change this significantly. PTCGNet reaches 70.0\% (random: 21.7\%). Its value head, trained on replays only, has Brier score .254, worse than always predicting the average outcome (.249); self-play fine-tuning brings it to .226. The belief head reaches AUROC .752, vs .711 for uniformly counting the unseen cards of the true decklist.
 
-\paragraph*{Search.} Search is the main source of strength (Tab.~\ref{tab:gen}); the deployed agent beats its own policy .59 (+65 Elo), so a value head weak alone suffices to guide it. Depth matters more than accurate hidden cards: sampling the hand from the belief head does not change the score (.48), and four worlds with a quarter of the simulations each lose to one deeper search (.39, $-75$ Elo).
+\paragraph*{Deck choice.} Eight decks from top replays were each played by the policy for 240 games against the gauntlet: the Kangaskhan/Crustle deck scored best (.73) and was used; Dragapult, the most popular at the top, scored .49 (App.~C).
 
-\paragraph*{Expert iteration and time.} Expert iteration with 64-simulation targets improved the search agent (.57, +49 Elo) but not the raw policy (.50): it learned priors for search, not imitation. A further round or a 6\,s cap gave no gain.
+\paragraph*{Search.} A head-to-head score $s$ is the fraction of games agent A wins against agent B (.50: equal strength). Search raises the gauntlet score from .75 to .90 (Tab.~\ref{tab:gen}), and the search agent beats its own policy with $s{=}.59$ (+65 Elo). Depth matters more than accurate hidden cards: belief-weighted against uniform hand sampling scores .48 (no difference), and four worlds with a quarter of the simulations each score .39 ($-75$ Elo) against one deeper search. With expert iteration (64-simulation targets) the search agent scores .57 (+49 Elo) against its predecessor while the raw policies tie (.50), so the network learned priors for search, not imitation. A third round or a 6\,s cap did not help.
 
-\paragraph*{Kaggle leaderboard.} On the ladder (rating $\mu$, start 600 \cite{herbrich2006trueskill}), DualCross reached 650 (weight average) and 500 (one-step search), though small local matches had ranked the latter first; PTCGNet reached 737 with four worlds and 768 with one, as predicted locally. The best one (expert iteration, 3\,s) scores 757.5 (166th/432).
+\paragraph*{Kaggle leaderboard.} Ratings $\mu$ \cite{herbrich2006trueskill} (start 600) are the values each submission stabilised at. DualCross reached 647.7 (weight average) and 498.0 (one-step search). PTCGNet reached $\approx$737 with four worlds and $\approx$768 with one, as predicted locally; the best (one world, expert iteration) stabilised at 773.2, 154th of 432.
 
 % ------------------------------------------------------------------------------
 \section{Discussion and conclusions}
-Imitation plateaued; guiding search with a smaller network raised the rating from 650 to 757.5. As belief, expert iteration and time no longer help, the network is the limit; a stronger gauntlet is the next step.
+Imitation plateaued, while search guided by a smaller network raised the rating from 648 to 773. As belief, expert iteration and time no longer help, the network is now the limit.
 
 % ------------------------------------------------------------------------------
 \section{Statement on the use of AI}\label{sec:ai}
@@ -205,7 +202,7 @@ WiSE v3 (IQL + PPO + IQL-rel.) & +120.7 & 62.5\% \\
 IQL v3 & +116.1 & 61.9\% \\
 IQL relational & +111.6 & 61.3\% \\
 BC & +107.1 & 60.6\% \\
-WiSE v1 (ladder 650) & +44.0 & 51.9\% \\
+WiSE v1 (ladder 647.7) & +44.0 & 51.9\% \\
 heuristic & $-$296.1 & 15.6\% \\
 first submission (ladder 250--400) & $-$504.6 & 3.1\% \\
 \bottomrule
