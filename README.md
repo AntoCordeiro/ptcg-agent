@@ -2,9 +2,19 @@
 
 Kaggle *Pokémon TCG AI Battle Challenge (Playground)* agent + DLAI 2025/26 exam project.
 
+Report: [`report/main.pdf`](report/main.pdf) — *Learning to Play the Pokémon Trading Card Game: Imitation vs
+Neural-Guided Search*. Full results: [`RESULTS.md`](RESULTS.md).
+
+Two agents, named after their networks:
+- **DualCross** (`gen1/`): relational transformer trained by behavioural cloning on top replays, refined with
+  IQL / PPO and weight averaging (WiSE-FT). Best ladder rating 647.7.
+- **PTCGNet** (`ptcg/`): small transformer (policy / value / count / belief heads) guiding a determinized
+  PUCT tree search on the game simulator, improved by expert iteration. Gauntlet score 0.75 (policy) → 0.90 (search);
+  best submission (sub4) **773.2 on the Kaggle leaderboard, 154th of 432**.
+
 ## Layout
 ```
-ptcg/            new code base
+ptcg/            PTCGNet agent (second agent, report Sec. 4)
   cards.py         static card/attack tables from the simulator database
   features.py      observation -> entity/option tokens (single encoder for every caller)
   parse.py         replays -> training shards (obs[s] answered by action[s+1]; opponent-hand labels)
@@ -18,13 +28,14 @@ ptcg/            new code base
   gauntlet.py      candidate vs fixed opponent pool
   metrics.py       offline test-split metrics (policy / value / belief)
   report.py        figures + results tables
+report/          LaTeX source and PDF of the report
 submission/      build.py + main template -> Kaggle tar.gz
 decks/           decklists (top-Elo archetype lists mined from replays + legacy decks)
 tools/           deck statistics, simulator benchmark, debugging scripts
 tests/           regression tests
 jobs/            file-based job runner (runs jobs on the Windows GPU machine)
 baselines/       legacy submissions used as fixed opponents
-gen1/            first-generation code and benchmark results (report Sec. 2)
+gen1/            DualCross agent: code and benchmark results (report Sec. 3)
 experiments/     logs, metrics, gauntlet results, figures
 ```
 

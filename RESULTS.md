@@ -1,13 +1,20 @@
-# Results (draft — updated as experiments finish)
+# Results
+
+Final numbers as reported in `report/main.pdf`. The two agents are named after their networks:
+**DualCross** (first agent, imitation + RL, code in `gen1/`) and **PTCGNet** (second agent, network-guided
+search, code in `ptcg/`). "Score" = fraction of games won by the candidate (A vs B in head-to-head; .50 = equal).
+
+**Kaggle leaderboard (stabilised ratings, 2026-10-18):** best submission sub4 (PTCGNet, 1 world, expert iteration)
+**773.2, 154th of 432**. DualCross: 647.7 (WiSE-FT) / 498.0 (one-step search).
 
 All online numbers: candidate vs opponent, seat-balanced, Kaggle-like 600 s time bank per agent,
-95% Wilson intervals. "Pool" = 6 fixed opponents: legacy v1 (≈650 ladder, Grimmsnarl), legacy latest
-(≈500 ladder, Hydrapple), and our BC policy piloting Dragapult / Ogerpon / Clefairy / Kangaskhan-Crustle.
+95% Wilson intervals. "Pool" (the gauntlet) = 6 fixed opponents: DualCross WiSE-FT (647.7 ladder, Grimmsnarl), DualCross final
+(498.0 ladder, Hydrapple), and the PTCGNet policy piloting Dragapult / Ogerpon / Clefairy / Kangaskhan-Crustle.
 
-## 1. Legacy system audit (motivation)
+## 1. DualCross evaluation audit (motivation)
 | Comparison | Local result | Ladder |
 |---|---|---|
-| legacy v1 (Grimmsnarl) vs legacy latest (Hydrapple), 350 games | v1 scores **0.317** [0.271, 0.368] (SPRT: H0) | v1 **650+** vs latest **~500** |
+| DualCross WiSE-FT (Grimmsnarl) vs DualCross final (Hydrapple), 350 games | WiSE-FT scores **0.317** [0.271, 0.368] (SPRT: H0) | WiSE-FT **647.7** vs final **498.0** |
 
 Local head-to-head between our own agents ranked them in the *opposite* order to the ladder.
 
@@ -98,18 +105,20 @@ without improving the raw policy — the network moves away from human imitation
 | seed 1 / + value FT | 70.2 / 70.3 | 0.827 / 0.834 | 0.2435 / 0.2233 | 0.754 |
 | no belief head (seed 0) | 70.3 | 0.831 | 0.2282 | — |
 
-## 5. Kaggle submissions
+## 5. Kaggle submissions (stabilised ladder ratings)
 | # | Package | Contents | Ladder |
 |---|---|---|---|
-| 1 | `submission/sub1_mcts_crustle.tar.gz` | value-FT net + MCTS (4 worlds, ≤2 s/decision) + Crustle | **~737** (after ~10 h) |
-| 2 | `submission/sub2_mcts_ogerpon.tar.gz` | same agent + Teal Mask Ogerpon deck | (optional) |
-| 3 | `submission/sub3_mcts1w_crustle.tar.gz` | value-FT net + MCTS **1 world** (≤2 s/decision) + Crustle | **~768** (after ~10 h) |
-| 4 | `submission/sub4_exit2_1w_crustle.tar.gz` | ExIt-2 net + MCTS 1 world + Crustle | **~759** (69 ladder eps, score 0.551) — deployed h2h vs sub3 config: 0.515 [0.446, 0.583], 200 games |
-| 5 | `submission/sub5_exit2_1w_3s_lib.tar.gz` | sub4 + time cap 3 s (reserve 60 s, divisor 60) + 120-deck opponent library | h2h vs sub4 config: 0.538 [0.460, 0.613], +26 Elo, 160 games; mean 185 s / max 300 s thinking per game; ladder **~794** after ~4 h (52 eps, score 0.654, min bank left 334 s) |
+| DualCross | (gen1) | WiSE-FT average of IQL + PPO models | **647.7** |
+| DualCross | (gen1) | final, with one-step simulator checks | **498.0** |
+| 1 | `submission/sub1_mcts_crustle.tar.gz` | PTCGNet (value-FT net) + MCTS (4 worlds, ≤2 s/decision) + Crustle | **736.6** |
+| 2 | `submission/sub2_mcts_ogerpon.tar.gz` | same agent + Teal Mask Ogerpon deck | not used in the report |
+| 3 | `submission/sub3_mcts1w_crustle.tar.gz` | PTCGNet (value-FT net) + MCTS **1 world** (≤2 s/decision) + Crustle | **768.4** |
+| 4 | `submission/sub4_exit2_1w_crustle.tar.gz` | ExIt-2 net + MCTS 1 world + Crustle | **773.2 (best, 154th of 432)** — h2h vs sub3 config: 0.515 [0.446, 0.583], 200 games |
+| 5 | `submission/sub5_exit2_1w_3s_lib.tar.gz` | sub4 + time cap 3 s (reserve 60 s, divisor 60) + 120-deck opponent library | **757.5** — h2h vs sub4 config: 0.538 [0.460, 0.613], 160 games; mean 185 s / max 300 s thinking per game |
+| 6 | `submission/sub6_exit2_1w_6s_lib.tar.gz` | sub5 with time cap 6 s (reserve 90 s, divisor 35) | not uploaded — h2h vs sub5: 0.491 [0.426, 0.557], 220 games, 4.5 s/move: no gain |
 
-Previous system on the same ladder: 650+ (best legacy) / ~500 (latest legacy).
-Local prediction vs ladder: 1 world > 4 worlds locally (+46 Elo, 400 games) and on the ladder (775 vs 750) —
-unlike the legacy evaluation, which ranked the two legacy agents in the wrong order.
+Local prediction vs ladder: 1 world > 4 worlds locally (+46 Elo, 400 games) and on the ladder (768.4 vs 736.6),
+unlike the DualCross evaluation, which ranked its two versions in the wrong order.
 
 ## 6. Ladder forensics (sub1 + sub3, 162 ladder episodes)
 - No errors or timeouts from our agent; the two INVALID episodes were opponents forfeiting.
