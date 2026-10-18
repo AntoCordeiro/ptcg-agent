@@ -15,7 +15,7 @@
 \begin{document}
 
 \twocolumn[
-\dlaititle{Search Beats Imitation: Neural-Guided Determinized MCTS\\for the Pok\'emon Trading Card Game}
+\dlaititle{Search Beats Imitation: From Offline RL to Neural-Guided\\Determinized MCTS for the Pok\'emon Trading Card Game}
 
 \begin{center}\today\end{center}
 
@@ -31,47 +31,73 @@
 \printAffiliationsAndNotice{}
 
 \begin{abstract}
-We build an agent for the Kaggle \emph{Pok\'emon TCG AI Battle Challenge}, a stochastic, imperfect-information card game with variable action sets. A 2.6M-parameter entity/option transformer is trained on 453k expert decisions with policy, value and opponent-hand (belief) heads; its value head is re-trained on self-play outcomes, and it guides a determinized Monte Carlo tree search on the exact game simulator. Under a rigorous protocol (held-out games, a fixed six-opponent gauntlet, 95\% Wilson intervals, SPRT), search raises the score against the gauntlet from 0.75 to 0.90 and the ladder rating from 650 (our previous system) to $\approx$790. A learned belief model predicts hidden cards better than counting (AUROC 0.75 vs 0.71) yet does not improve play: at our budgets one deep search tree beats averaging several shallow determinized trees.
+We study agents for the Pok\'emon Trading Card Game, a stochastic, imperfect-information game with variable action sets (Kaggle \emph{PTCG AI Battle Challenge}). A first generation combined a relational transformer with imitation, offline RL, self-play PPO and weight ensembling: 63\% expert-move accuracy, but at most 650 on the ladder. A second generation uses a compact transformer as prior and value for determinized Monte Carlo tree search on the exact simulator, trained with self-play and expert iteration and evaluated with a fixed gauntlet, confidence intervals and sequential tests. Search raises the gauntlet score from 0.75 to 0.90 and the rating to $\approx$794. A learned belief over the opponent's hand predicts hidden cards better than counting yet does not improve play: one deep tree beats several shallow determinized ones.
 \end{abstract}
 
 % ------------------------------------------------------------------------------
 \section{Introduction}
-In the Pok\'emon TCG two players pilot 60-card decks; most information (hands, deck order, prize cards) is hidden, draws and coin flips are random, and the legal move set changes at every decision (play a card, attach, evolve, attack, pick targets, choose $k$ of $n$ cards). The Kaggle challenge provides a C++ simulator with a \emph{search} API that can step a game forward from any observation once the hidden cards are guessed, a ladder with a Gaussian skill rating, and a budget of $\approx$600\,s of thinking per best-of-3 match on 2 CPUs.
+In the Pok\'emon TCG two players pilot 60-card decks; hands, deck order and prize cards are hidden, draws and coin flips are random, and the legal move set changes at every decision (play, attach, evolve, attack, choose targets, choose $k$ of $n$ cards). Kaggle provides 5k high-rated replays, a C++ simulator that can step a game forward once the hidden cards are guessed, and a rated ladder; agents get 2 CPUs and 600\,s of thinking per game.
 
-Our previous system stacked behavioural cloning, offline RL, PPO and weight averaging, but spent 6\,ms per move and reached only 250--650 on the ladder. Its local evaluation was invalid: in 350 games it rated the 500-ladder agent \emph{above} the 650-ladder one (score 0.32 for the latter). We therefore rebuilt the agent around (i) a simple network, (ii) search that actually uses the simulator and the time budget, and (iii) an evaluation protocol whose conclusions we can trust and check against the ladder. Code: \url{https://github.com/USER/ptcg-agent} (TODO).
+We report two generations of agents: the first (\S\ref{sec:gen1}) asks how far learning alone goes; the second (\S\ref{sec:gen2}), motivated by its failure modes, asks how much a learned model gains from planning with the real engine. We contribute an account of what transferred from offline metrics to play, a search agent that lifts the rating from 650 to $\approx$794, controlled ablations (belief, determinization, budget, expert iteration) and an evaluation protocol that agrees with the ladder. Code: \url{https://github.com/USER/ptcg-agent} (TODO).
 
-% ------------------------------------------------------------------------------
-\section{Related work}
-AlphaGo/AlphaZero combine policy/value networks with PUCT tree search \cite{silver2016mastering,silver2018general}; expert iteration distils search back into the network \cite{anthony2017thinking}. For imperfect information, perfect-information Monte Carlo (PIMC) samples \emph{determinizations} of the hidden state and searches each \cite{long2010understanding}; information-set MCTS shares one tree across samples \cite{cowling2012information}. Entity/pointer transformers handle variable action sets in complex games \cite{vinyals2019grandmaster,vaswani2017attention}.
+\paragraph*{Related work.} AlphaGo/AlphaZero combine policy/value networks with PUCT search \cite{silver2016mastering,silver2018general}, and expert iteration distils search into the network \cite{anthony2017thinking}. For imperfect information, perfect-information Monte Carlo samples \emph{determinizations} of the hidden state \cite{long2010understanding}; information-set MCTS shares one tree across samples \cite{cowling2012information}. We also build on transformers with pointer outputs \cite{vaswani2017attention,vinyals2019grandmaster}, IQL \cite{kostrikov2022offline}, PPO \cite{schulman2017proximal} and WiSE-FT \cite{wortsman2022robust}.
 
 % ------------------------------------------------------------------------------
-\section{Method}
-\paragraph*{Representation and network.} Each observation becomes tokens: one global token (turn, prizes, deck/hand sizes, the decision type), two mean-pooled discard bags, up to 64 card tokens (Pok\'emon in play with HP, damage, energies; our hand; stadium; revealed cards) and up to 80 option tokens, one per legal move. An option token adds the embeddings of the card tokens it refers to (acting card, target), so the network scores moves by \emph{what they touch}; no card-specific rules are hand-coded. A 4-layer pre-norm transformer ($d{=}192$, 2.6M parameters) mixes all tokens. Heads: a policy over option tokens (plus a count head for $k$-of-$n$ choices), a value $V(s)\in[-1,1]$, and a belief head predicting, for every card id, whether it is in the opponent's hand.
+\section{First generation: learning without planning}\label{sec:gen1}
+\paragraph*{Model.} \emph{PTCGDualCrossNet} encodes 60 state and 80 option tokens (332-d hand-crafted features with frozen card-text embeddings) and a global vector with a card-tracker belief. A 4-layer encoder ($d{=}256$) is followed by 3 cross-attention layers where options attend to the state with biases from 8 symbolic relations (e.g.\ ``evolves from''), a gated self-attention over options and an autoregressive pointer for $k$-of-$n$ choices.
 
-\paragraph*{Training.} We parse the 3{,}000 highest-rated replays (453k decisions, split 90/5/5 \emph{by game}), pairing the observation at step $s$ with the action recorded at step $s{+}1$. Belief labels come for free: the replay stores the opponent's own view of its hand. The loss is cross-entropy on the chosen option(s) (losers' moves weighted 0.5) plus value MSE, count BCE and belief BCE (12 epochs, AdamW). With only 3k game outcomes the value head overfits (test Brier worse than a constant), so we fine-tune it on 8k games of policy self-play while anchoring the policy on replay batches. Optionally, expert iteration (ExIt) adds MCTS visit distributions from 1.6k search-vs-search games as policy targets.
+\paragraph*{Training.} Behavioural cloning (BC) on 75k decisions from the top $\approx$650 replays; IQL (expectile $\tau{=}0.75$, advantage-weighted extraction); league PPO against past snapshots over 5--15 decks; WiSE-FT interpolation of BC, IQL and PPO weights; plus a recurrent variant and an oracle critic. A light search vetoed deck-outs, took lethal attacks and re-ranked close ties (6\,ms/move).
 
-\paragraph*{Search.} At each single-choice decision we sample $K$ worlds: our deck order and prizes uniformly from our unseen cards; the opponent's decklist as the library deck (120 decklists mined from replays and ladder games) most consistent with its visible cards; its hand either uniformly (count-based) or weighted by the belief head. In each world we run PUCT with network priors and value leaves on the simulator; forced moves and $k$-of-$n$ choices are played by the policy. Root visits are summed over worlds. A time manager spends $\min(c, (T_{\text{left}}-r)/q)$ seconds per decision, keeping a reserve of the 600\,s budget.
+\paragraph*{Findings.} Fixing a one-step observation/action misalignment in the replays raised BC accuracy from 40.9\% to 63.3\%; IQL reached 63.4\%. The extra machinery did not transfer to play: the recurrent model tied the memoryless one (47.5\%, 40 games), the oracle critic did not fit values better, PPO saw only $\approx$165 games, and an agent rated +240 Elo \emph{better} locally (40 games) scored 500 on the ladder vs 650 for its predecessor; with 350 games the 650-agent scores only 0.32 locally. Small head-to-head tests between our own agents did not predict the ladder.
 
-\paragraph*{Evaluation.} Offline metrics on held-out test games. Online: a fixed \emph{gauntlet} of six opponents (our two previous Kaggle agents with their decks, and our imitation policy piloting four meta decks), seat-balanced, with a simulated Kaggle time budget; we report scores with 95\% Wilson intervals, use paired head-to-head matches for ablations and an SPRT ($H_0$: +0, $H_1$: +30 Elo) to gate submissions.
+% ------------------------------------------------------------------------------
+\section{Second generation: planning with the simulator}\label{sec:gen2}
+\paragraph*{Network.} We keep entity/option tokens but drop hand-crafted features (option tokens add the embeddings of the cards they act on); a 4-layer pre-norm transformer ($d{=}192$, 2.6M parameters) feeds a policy, a count head for $k$-of-$n$ choices, a value head and a \emph{belief} head predicting which cards are in the opponent's hand, supervised by the opponent's own view stored in the replay. We train on 453k decisions from the top 3{,}000 replays (split 90/5/5 by game). The value head overfits the 3k game outcomes, so it is fine-tuned on 8k self-play games with the policy anchored on replays.
+
+\paragraph*{Search.} At each decision we sample $K$ determinizations (own deck/prizes uniform; opponent decklist the most consistent of 120 decklists mined from replays and ladder games; opponent hand uniform or from the belief head) and run PUCT with network priors and value leaves on the simulator; forced moves are played by the policy and root visits are summed over worlds. A time manager spends $\min(c, (T_\text{left}-r)/q)$ seconds per decision. Expert iteration (ExIt) fine-tunes the network on visit distributions of MCTS self-play.
+
+\paragraph*{Protocol.} Offline metrics on held-out games; online, a fixed gauntlet of six opponents (two first-generation agents and our policy piloting four meta decks) with a simulated time budget, 95\% Wilson intervals, paired head-to-head ablations and an SPRT ($H_0$: 0, $H_1$: +30 Elo).
 
 % ------------------------------------------------------------------------------
 \section{Results}
 \begin{table}[t]
-\caption{Top: offline results on held-out games. Bottom: online ablations (score of A vs B, 95\% CI).}
-\label{tab:results}
+\caption{System comparison. Expert-move accuracy is measured on each generation's own validation/test split. Gauntlet: score vs the six fixed opponents (95\% CI).}
+\label{tab:gen}
+\begin{center}
+\begin{small}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+System & top-1 & gauntlet & ladder \\
+\midrule
+Gen-1 BC / IQL & 63.3 / 63.4\% & -- & -- \\
+Gen-1 WiSE + light search & -- & -- & 650 \\
+Gen-1 final (search v4) & -- & -- & 500 \\
+\midrule
+Gen-2 policy only & 70.0\% & .75 [.69,.80] & -- \\
+Gen-2 MCTS, 4 worlds, 2\,s & -- & .90 [.85,.94] & 737 \\
+Gen-2 MCTS, 1 world, 2\,s & -- & -- & 768 \\
+\, + ExIt, 3\,s, deck library & -- & -- & \textbf{794} \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vspace{-0.4cm}
+\end{table}
+
+\begin{table}[t]
+\caption{Gen-2 offline results (held-out games) and online ablations (score of A vs B, 95\% CI).}
+\label{tab:abl}
 \begin{center}
 \begin{small}
 \begin{tabular}{@{}lr@{}}
 \toprule
-Policy top-1 (uniform-legal baseline) & 70.0\% (21.7\%) \\
-\quad main phase, $\geq$5 options & 60.7\% (11.6\%) \\
+Policy top-1, main phase $\geq$5 options (uniform) & 60.7\% (11.6\%) \\
 Value Brier: replay-only / +self-play (const.) & .254 / .226 (.249) \\
 Belief AUROC: learned / count w/ true list & .752 / .711 \\
 \midrule
 MCTS-64 vs own policy (200 games) & .59 [.52, .66] \\
 learned vs count-based hand sampling (400) & .48 [.43, .53] \\
 4 worlds vs 1 world, equal sims (300) & .39 [.34, .45] \\
-deployed: 1 vs 4 worlds (400) & .57 [.52, .61] \\
 ExIt-2 + MCTS vs base + MCTS (300) & .57 [.51, .62] \\
 ExIt-3 + MCTS vs ExIt-2 + MCTS (300) & .50 [.45, .56] \\
 searching $k$-of-$n$ choices vs policy (400) & .48 [.43, .53] \\
@@ -84,40 +110,61 @@ searching $k$-of-$n$ choices vs policy (400) & .48 [.43, .53] \\
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.85\linewidth]{figures/search_scaling.png}
+\includegraphics[width=0.70\linewidth]{figures/search_scaling.png}
 \vspace{-0.3cm}
-\caption{Score against the six-opponent gauntlet (Crustle deck, 180--240 games per point, 95\% CI) as a function of search budget; ``time bank'' is the deployed agent (up to 2\,s per decision).}
+\caption{Gauntlet score vs search budget (Crustle deck, 180--240 games per point, 95\% CI); ``time bank'' is the deployed agent.}
 \label{fig:scaling}
-\vspace{-0.4cm}
+\vspace{-0.45cm}
 \end{figure}
 
-\paragraph*{Offline.} The policy predicts expert moves far above chance (Tab.~\ref{tab:results}); two seeds agree within 0.3 points. Self-play fixes the overfit value head. The belief head beats a count-based baseline that is even given the opponent's true decklist, without access to the decklist, presumably by learning from the public game state which cards players tend to hold.
+\paragraph*{Offline and deck.} The Gen-2 policy predicts 70.0\% of expert moves (uniform: 21.7\%; two seeds within 0.3 points); the belief head beats counting even with the true decklist, and self-play makes the value better than a constant (Tab.~\ref{tab:abl}). The deck dominating top replays (Dragapult) scores 0.49 with our policy, Kangaskhan/Crustle 0.73 (240 games each).
 
-\paragraph*{Deck choice.} Piloted by our policy, the deck that dominates top-rated replays (Dragapult, 57\% win rate there) scores only 0.49 against the gauntlet, while a Kangaskhan/Crustle deck scores 0.73 (240 games each): the best deck for an agent depends on the agent.
+\paragraph*{Search.} Search is the main source of strength (Fig.~\ref{fig:scaling}): 0.75 for the raw policy, 0.87 at 256 simulations and 0.90 for the deployed agent, reproduced on a second seed. Belief-sampled hands do not help, and four determinizations lose to one deeper tree ($-75$ Elo): at these depths the exact hand rarely matters. ExIt with 64-simulation targets leaves the raw policy unchanged but strengthens search (+49 Elo); a third round and searching $k$-of-$n$ choices did not help.
 
-\paragraph*{Search.} Search is the main source of strength (Fig.~\ref{fig:scaling}): 0.75 for the raw policy, 0.87 at 256 simulations, 0.90 for the deployed agent (0.93 against a reconstruction of our previous best Kaggle agent), reproduced on a second seed. Surprisingly, the learned belief gives no measurable gain when used to sample hands, and splitting a fixed budget over four determinizations is \emph{worse} than one deep tree ($-75$ Elo): at these depths the tree rarely reaches situations where the opponent's exact hand matters. ExIt with 64-simulation targets does not change the raw policy (0.50) but makes the search stronger (+49 Elo), while ExIt with noisy 16-simulation targets did not help and a third round brought no further gain (0.50). Extending search to $k$-of-$n$ card choices did not help either (0.48).
-
-\paragraph*{Ladder.} Our previous agents sit at 650 and 500. The new agent rated $\approx$737 (4 worlds) and $\approx$768 (1 world) after 10 hours; adding the ExIt-2 network, a 3\,s cap and a 120-deck opponent library reached $\approx$794 after 4 hours (score 0.65 over 52 matches), our best. Unlike the old protocol, the local ranking (1 world $>$ 4 worlds) matches the ladder.
+\paragraph*{Ladder.} Gen-2 agents rate 737--794 against 500--650 for Gen-1 (Tab.~\ref{tab:gen}), and the local ranking (1 world $>$ 4 worlds, +46 Elo over 400 games) matches the ladder.
 
 % ------------------------------------------------------------------------------
 \section{Discussion and conclusions}
-A small imitation network is a good prior, but the gains come from looking ahead with the real game engine. Better hidden-information modelling helps prediction but not play at our search depth, a negative result we confirmed with two budgets and an ablation on the number of worlds. Limitations: four of six gauntlet opponents share our network, ladder ratings are still converging, and expert iteration plateaued after two useful rounds at our compute.
+Learning alone plateaued: richer architectures and offline/online RL improved imitation metrics but not play, while a smaller network used as a prior for search on the true game engine gained $\approx$150 rating points. Belief modelling helps prediction, not play, at our depth. Limitations: four of six gauntlet opponents share our network, and 800+-rated opponents remain hard (0.36--0.50).
 
 % ------------------------------------------------------------------------------
 \section{Statement on the use of AI}\label{sec:ai}
-I used an AI assistant (Claude, Anthropic) extensively throughout the project, as a pair programmer and research assistant. It helped review the previous code base and its failure modes, propose the experimental plan, write most of the new code (replay parser, tokeniser, model and training scripts, self-play, MCTS, evaluation and statistics, submission packaging), launch and monitor experiments on my machine through a job runner, analyse results, produce the plots, and draft this report. I chose the direction of the project, reviewed the code and results, ran the Kaggle submissions, and checked that every number in this report comes from the logged experiments (\texttt{RESULTS.md} in the repository); I take full responsibility for the content and can explain all parts of it.
+I used an AI assistant (Claude, Anthropic) extensively throughout the project, as a pair programmer and research assistant, in both generations. It helped write and debug code (data pipelines, models, training, search, evaluation), diagnose failure modes, propose experiments, launch and monitor runs on my machine, analyse results, produce plots and draft this report. I chose the directions of the project, reviewed code and results, ran the Kaggle submissions and checked that every number reported comes from logged experiments (\texttt{RESULTS.md}, \texttt{PROJECT\_JOURNAL.md}); I take full responsibility for the content and can explain all of it.
 
 \bibliography{references.bib}
 \bibliographystyle{dlaiml2026}
 
 \clearpage
 \appendix
-\section*{Appendix: additional results}
+\section*{Appendix A: first-generation details}
+\begin{table}[h]
+\caption{Gen-1 local Bradley--Terry ladder (mirror deck, 20 games per pair; Elo relative to the mean). Note the small samples; the top-rated agents later scored lower on the ladder than \texttt{wise}.}
+\begin{center}\begin{small}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Agent & BT Elo & mirror win rate \\
+\midrule
+self-play PPO v3 & +180.5 & 70.6\% \\
+search v4 (WiSE v3) & +120.7 & 62.5\% \\
+WiSE v3 (IQL + PPO + IQL-rel.) & +120.7 & 62.5\% \\
+IQL v3 & +116.1 & 61.9\% \\
+IQL relational & +111.6 & 61.3\% \\
+BC & +107.1 & 60.6\% \\
+WiSE v1 (ladder 650) & +44.0 & 51.9\% \\
+heuristic & $-$296.1 & 15.6\% \\
+first submission (ladder 250--400) & $-$504.6 & 3.1\% \\
+\bottomrule
+\end{tabular}
+\end{small}\end{center}
+\end{table}
+Other Gen-1 components: a championship-deck tournament over decks reconstructed from top replays (16 games per pair, which selected Hydrapple/Ogerpon); a card tracker with archetype inference; rules for multi-select counts (e.g.\ attaching 2--5 energies); and forensic analysis of ladder losses, which found the replay misalignment, a module-name collision that crashed a submission, belief-state carry-over between games of a match, and deck-search choices blind to evolution lines. The recurrent policy tied the memoryless one (47.5\%, CI [32.9, 62.5], 40 games); the asymmetric (oracle) critic did not fit values better than the observable critic.
+
+\section*{Appendix B: additional second-generation results}
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.48\linewidth]{figures/belief_auroc.png}\hfill
 \includegraphics[width=0.40\linewidth]{figures/value_calibration.png}
-\caption{Left: opponent-hand prediction AUROC on held-out games. Right: value calibration on held-out replay games before and after self-play fine-tuning (Brier .254 $\rightarrow$ .226).}
+\caption{Left: opponent-hand prediction AUROC on held-out games. Right: value calibration before and after self-play fine-tuning.}
 \end{figure}
 \begin{figure}[h]
 \centering
@@ -125,13 +172,15 @@ I used an AI assistant (Claude, Anthropic) extensively throughout the project, a
 \caption{Validation curves with and without the auxiliary belief head (no effect on the policy).}
 \end{figure}
 \begin{table}[h]
-\caption{Additional ablations (Crustle mirror, MCTS-64, 1 world; score of A vs B, 95\% CI).}
+\caption{Further ablations (Crustle mirror; score of A vs B, 95\% CI).}
 \begin{center}\begin{small}
 \begin{tabular}{@{}lr@{}}
 \toprule
-$c_{\text{puct}}=0.7$ vs $1.25$ (240 games) & .51 [.45, .58] \\
-$c_{\text{puct}}=2.5$ vs $1.25$ (240 games) & .43 [.37, .49] \\
-deployed: 3\,s cap + 120-deck library vs 2\,s, 8 decks (160) & .54 [.46, .61] \\
+learned vs count-based hands, 256 sims (208) & .52 [.45, .58] \\
+deployed: 1 vs 4 worlds (400) & .57 [.52, .61] \\
+$c_{\text{puct}}=0.7$ vs $1.25$ (240) & .51 [.45, .58] \\
+$c_{\text{puct}}=2.5$ vs $1.25$ (240) & .43 [.37, .49] \\
+3\,s cap + 120-deck library vs 2\,s, 8 decks (160) & .54 [.46, .61] \\
 \bottomrule
 \end{tabular}
 \end{small}\end{center}
