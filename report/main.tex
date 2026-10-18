@@ -58,12 +58,12 @@ The network was trained on 453k decisions from the 3{,}000 best-rated replays, s
 \paragraph*{Search.} At each decision with two or more options the agent samples a \emph{world}, an assignment of all hidden cards consistent with its view: its unseen cards are shuffled into deck and prizes, the opponent's decklist is the closest of 120 replay decklists to its visible cards, and its hand is drawn from the rest, uniformly or weighted by the belief head. The simulator then searches this world for both players, modelling the opponent with the same network. Each simulation descends the tree by the PUCT rule, favouring options the policy rates likely (high prior) or whose continuations scored well, and scores the new position with the value head rather than playing to the end, costly and noisy. The search stops when the time given to the decision, a share of the remaining time bank (Appendix~D), runs out, and the most visited option is played. Expert iteration then retrains the policy on the visit distributions of search self-play.
 
 \paragraph*{Evaluation protocol.}\label{sec:eval}
-Playing strength is the \emph{score}, the fraction of games won. The \emph{gauntlet} is a fixed pool of six opponents: the two DualCross submissions and the PTCGNet policy piloting four popular decks. Runs use 200--400 games, alternating the first player, and report 95\% Wilson intervals \cite{wilson1927probable} and the Elo difference $400\log_{10}(s/(1-s))$; in head-to-head comparisons a sequential test (SPRT) \cite{wald1945sequential} only decides when enough games have been played. Offline, on test decisions, top-1 agreement with the expert evaluates the policy, the Brier score (squared error of the win probability) \cite{brier1950verification} the value, and AUROC against the true hand the belief.
+Playing strength is the \emph{score}, the fraction of games won. The \emph{gauntlet} is a fixed pool of six opponents: the two DualCross submissions and the PTCGNet policy piloting four popular decks. Runs use 200--400 games, alternating the first player, and report 95\% Wilson intervals \cite{wilson1927probable} and the Elo difference $400\log_{10}(s/(1-s))$; in head-to-head comparisons a sequential test (SPRT) \cite{wald1945sequential} only decides when enough games have been played. On test decisions, the policy is scored by top-1 expert agreement, the value by the Brier score (squared error of win probability) \cite{brier1950verification}, and the belief by AUROC on the true hand.
 
 % ------------------------------------------------------------------------------
 \section{Results}
 \begin{table}[t]
-\caption{Offline metrics on held-out decisions (DualCross on its own split) and gauntlet score (95\% CI).}
+\caption{Offline metrics on held-out decisions (DualCross on its own split; it has no belief output and its value was not scored this way) and gauntlet score (95\% CI).}
 \label{tab:gen}
 \begin{center}
 \begin{small}
@@ -71,7 +71,7 @@ Playing strength is the \emph{score}, the fraction of games won. The \emph{gaunt
 \toprule
 Network & top-1 & Brier & AUROC \\
 \midrule
-DualCross, BC & 63.3\% & -- & -- \\
+DualCross, BC & 63.3\% & n/a & n/a \\
 PTCGNet (+ self-play value) & 70.0\% & .254 (.226) & .752 \\
 \midrule
 Gauntlet: policy / + MCTS & \multicolumn{3}{r}{.75 [.69,.80] / .90 [.85,.94]} \\
