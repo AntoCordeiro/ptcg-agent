@@ -31,14 +31,14 @@
 \printAffiliationsAndNotice{}
 
 \begin{abstract}
-We study agents for the Pok\'emon Trading Card Game, a stochastic, imperfect-information game with variable action sets (Kaggle \emph{PTCG AI Battle Challenge}). A first generation combined a relational transformer with imitation, offline RL, self-play PPO and weight ensembling: 63\% expert-move accuracy, but at most 650 on the ladder. A second generation uses a compact transformer as prior and value for determinized Monte Carlo tree search on the exact simulator, trained with self-play and expert iteration and evaluated with a fixed gauntlet, confidence intervals and sequential tests. Search raises the gauntlet score from 0.75 to 0.90 and the rating to $\approx$794. A learned belief over the opponent's hand predicts hidden cards better than counting yet does not improve play: one deep tree beats several shallow determinized ones.
+We study agents for the Pok\'emon Trading Card Game, a stochastic, imperfect-information game with variable action sets (Kaggle \emph{PTCG AI Battle Challenge}). A first generation combined a relational transformer with imitation, offline RL, self-play PPO and weight ensembling: 63\% expert-move accuracy, but at most 650 on the ladder. A second generation uses a compact transformer as prior and value for determinized Monte Carlo tree search on the exact simulator, trained with self-play and expert iteration and evaluated with a fixed gauntlet, confidence intervals and sequential tests. Search raises the gauntlet score from 0.75 to 0.90 and the ladder rating $\mu$ to $\approx$770. A learned belief over the opponent's hand predicts hidden cards better than counting yet does not improve play: one deep tree beats several shallow determinized ones.
 \end{abstract}
 
 % ------------------------------------------------------------------------------
 \section{Introduction}
 In the Pok\'emon TCG two players pilot 60-card decks; hands, deck order and prize cards are hidden, draws and coin flips are random, and the legal move set changes at every decision (play, attach, evolve, attack, choose targets, choose $k$ of $n$ cards). Kaggle provides 5k high-rated replays, a C++ simulator that can step a game forward once the hidden cards are guessed, and a rated ladder; agents get 2 CPUs and 600\,s of thinking per game.
 
-We report two generations of agents: the first (\S\ref{sec:gen1}) asks how far learning alone goes; the second (\S\ref{sec:gen2}), motivated by its failure modes, asks how much a learned model gains from planning with the real engine. We contribute an account of what transferred from offline metrics to play, a search agent that lifts the rating from 650 to $\approx$794, controlled ablations (belief, determinization, budget, expert iteration) and an evaluation protocol that agrees with the ladder. Code: \url{https://github.com/USER/ptcg-agent} (TODO).
+We report two generations of agents: the first (\S\ref{sec:gen1}) asks how far learning alone goes; the second (\S\ref{sec:gen2}), motivated by its failure modes, asks how much a learned model gains from planning with the real engine. We contribute an account of what transferred from offline metrics to play, a search agent that lifts the rating from 650 to $\approx$770, controlled ablations (belief, determinization, budget, expert iteration) and an evaluation protocol that, unlike our first, agreed with the ladder where tested. Code: \url{https://github.com/AntoCordeiro/ptcg-agent}.
 
 \paragraph*{Related work.} AlphaGo/AlphaZero combine policy/value networks with PUCT search \cite{silver2016mastering,silver2018general}, and expert iteration distils search into the network \cite{anthony2017thinking}. For imperfect information, perfect-information Monte Carlo samples \emph{determinizations} of the hidden state \cite{long2010understanding}; information-set MCTS shares one tree across samples \cite{cowling2012information}. We also build on transformers with pointer outputs \cite{vaswani2017attention,vinyals2019grandmaster}, IQL \cite{kostrikov2022offline}, PPO \cite{schulman2017proximal} and WiSE-FT \cite{wortsman2022robust}.
 
@@ -48,7 +48,7 @@ We report two generations of agents: the first (\S\ref{sec:gen1}) asks how far l
 
 \paragraph*{Training.} Behavioural cloning (BC) on 75k decisions from the top $\approx$650 replays; IQL (expectile $\tau{=}0.75$, advantage-weighted extraction); league PPO against past snapshots over 5--15 decks; WiSE-FT interpolation of BC, IQL and PPO weights; plus a recurrent variant and an oracle critic. A light search vetoed deck-outs, took lethal attacks and re-ranked close ties (6\,ms/move).
 
-\paragraph*{Findings.} Fixing a one-step observation/action misalignment in the replays raised BC accuracy from 40.9\% to 63.3\%; IQL reached 63.4\%. The extra machinery did not transfer to play: the recurrent model tied the memoryless one (47.5\%, 40 games), the oracle critic did not fit values better, PPO saw only $\approx$165 games, and an agent rated +240 Elo \emph{better} locally (40 games) scored 500 on the ladder vs 650 for its predecessor; with 350 games the 650-agent scores only 0.32 locally. Small head-to-head tests between our own agents did not predict the ladder.
+\paragraph*{Findings.} Fixing a one-step observation/action misalignment in the replays raised BC accuracy from 40.9\% to 63.3\%; IQL reached 63.4\%. The extra machinery did not transfer to play: PPO saw only $\approx$165 games, and an agent rated +240 Elo \emph{better} locally (40 games) scored 500 on the ladder vs 650 for its predecessor; with 350 games the 650-agent scores only 0.32 locally. Small head-to-head tests between our own agents did not predict the ladder.
 
 % ------------------------------------------------------------------------------
 \section{Second generation: planning with the simulator}\label{sec:gen2}
@@ -61,7 +61,7 @@ We report two generations of agents: the first (\S\ref{sec:gen1}) asks how far l
 % ------------------------------------------------------------------------------
 \section{Results}
 \begin{table}[t]
-\caption{System comparison. Expert-move accuracy is measured on each generation's own validation/test split. Gauntlet: score vs the six fixed opponents (95\% CI).}
+\caption{System comparison. Expert-move accuracy is measured on each generation's own validation/test split. Gauntlet: score vs the six fixed opponents (95\% CI). Ladder: Kaggle rating $\mu$ (start 600).}
 \label{tab:gen}
 \begin{center}
 \begin{small}
@@ -76,7 +76,7 @@ Gen-1 final (search v4) & -- & -- & 500 \\
 Gen-2 policy only & 70.0\% & .75 [.69,.80] & -- \\
 Gen-2 MCTS, 4 worlds, 2\,s & -- & .90 [.85,.94] & 737 \\
 Gen-2 MCTS, 1 world, 2\,s & -- & -- & 768 \\
-\, + ExIt, 3\,s, deck library & -- & -- & \textbf{794} \\
+\, + ExIt, 2--3\,s, deck library & -- & -- & \textbf{770} \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -121,15 +121,15 @@ searching $k$-of-$n$ choices vs policy (400) & .48 [.43, .53] \\
 
 \paragraph*{Search.} Search is the main source of strength (Fig.~\ref{fig:scaling}): 0.75 for the raw policy, 0.87 at 256 simulations and 0.90 for the deployed agent, reproduced on a second seed. Belief-sampled hands do not help, and four determinizations lose to one deeper tree ($-75$ Elo): at these depths the exact hand rarely matters. ExIt with 64-simulation targets leaves the raw policy unchanged but strengthens search (+49 Elo); a third round and searching $k$-of-$n$ choices did not help.
 
-\paragraph*{Ladder.} Gen-2 agents rate 737--794 against 500--650 for Gen-1 (Tab.~\ref{tab:gen}), and the local ranking (1 world $>$ 4 worlds, +46 Elo over 400 games) matches the ladder.
+\paragraph*{Ladder.} Gen-2 agents rate 737--770 against 500--650 for Gen-1 (Tab.~\ref{tab:gen}), and the one local ranking testable there (1 $>$ 4 worlds) held on the ladder (768 vs 737).
 
 % ------------------------------------------------------------------------------
 \section{Discussion and conclusions}
-Learning alone plateaued: richer architectures and offline/online RL improved imitation metrics but not play, while a smaller network used as a prior for search on the true game engine gained $\approx$150 rating points. Belief modelling helps prediction, not play, at our depth. Limitations: four of six gauntlet opponents share our network, and 800+-rated opponents remain hard (0.36--0.50).
+Learning alone plateaued: richer architectures and offline/online RL improved imitation metrics but not play, while a smaller network used as a prior for search on the true game engine gained $\approx$120 rating points. Belief modelling helps prediction, not play, at our depth. Limitations: four of six gauntlet opponents share our network and picked our deck; the gauntlet saturates (0.90) while 800+-rated opponents remain hard (0.36--0.52).
 
 % ------------------------------------------------------------------------------
 \section{Statement on the use of AI}\label{sec:ai}
-I used an AI assistant (Claude, Anthropic) extensively throughout the project, as a pair programmer and research assistant, in both generations. It helped write and debug code (data pipelines, models, training, search, evaluation), diagnose failure modes, propose experiments, launch and monitor runs on my machine, analyse results, produce plots and draft this report. I chose the directions of the project, reviewed code and results, ran the Kaggle submissions and checked that every number reported comes from logged experiments (\texttt{RESULTS.md}, \texttt{PROJECT\_JOURNAL.md}); I take full responsibility for the content and can explain all of it.
+I used an AI assistant (Claude, Anthropic) extensively throughout the project, as a pair programmer and research assistant, in both generations. It helped write and debug code (data pipelines, models, training, search, evaluation), diagnose failure modes, propose experiments, launch and monitor runs on my machine, analyse results, produce plots and draft this report. I chose the directions of the project, reviewed code and results, ran the Kaggle submissions and checked every reported number against the logged experiment outputs (per-game result files and summaries in \texttt{experiments/}, \texttt{RESULTS.md}, \texttt{PROJECT\_JOURNAL.md}). I understand and can explain the model, the search and the training code; I take full responsibility for the content and can explain all of it.
 
 \bibliography{references.bib}
 \bibliographystyle{dlaiml2026}
@@ -200,5 +200,7 @@ Lillie's Clefairy ex & .28 [.23, .34] \\
 \end{tabular}
 \end{small}\end{center}
 \end{table}
+
+\paragraph*{Training and compute.} Supervised training: AdamW (lr $4\cdot10^{-4}$, weight decay 0.05, batch 512, 12 epochs, loss weights policy 1, value 0.25, count 0.2, belief 0.05; moves of the losing player weighted 0.5), $\approx$45 min on one RTX 4070 Ti SUPER. Value fine-tuning and ExIt: 3 epochs, lr $1.5\cdot10^{-4}$, on 8k policy self-play games (value) and on 2{,}400 MCTS-16 / 1{,}600 MCTS-64 self-play games (ExIt rounds). Evaluation: 20 games in parallel on a 24-thread CPU, one CPU thread per agent, with Kaggle's 600\,s bank simulated per game (it resets each game of a best-of-3 match on the ladder); the deployed agent averages $\approx$2.4\,s per move.
 
 \end{document}

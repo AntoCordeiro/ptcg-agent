@@ -30,3 +30,5 @@ report/*.log
 report/*.bbl
 report/*.blg
 report/*.out
+# local copy of the course template
+template/
