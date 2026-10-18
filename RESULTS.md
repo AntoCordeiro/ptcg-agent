@@ -81,7 +81,10 @@ One round with 16-simulation targets did not improve playing strength.
 | ExIt-2 policy vs base policy | 400 | 0.503 [0.454, 0.551] | +2 [−32, +36] |
 | **ExIt-2 + MCTS-64 (1 world) vs base + MCTS-64 (1 world)** | **300** | **0.570** [0.513, 0.625] | **+49** [+9, +89] |
 
-Offline: ExIt-2 replay top-1 68.8%, NLL 0.888, value Brier 0.2210.
+| ExIt-3 + MCTS-64 (1 world) vs ExIt-2 + MCTS-64 (1 world) | 300 | 0.502 [0.445, 0.558] | +1 [−38, +40] |
+
+Offline: ExIt-2 replay top-1 68.8%, NLL 0.888, value Brier 0.2210; ExIt-3 68.6%, 0.890, 0.2195.
+Round 3 (targets from the ExIt-2 search) brings no further gain: expert iteration plateaus after round 2 at this compute.
 With better search targets, expert iteration improves the *search* agent (better priors/values for the tree)
 without improving the raw policy — the network moves away from human imitation towards what search needs.
 
@@ -95,11 +98,19 @@ without improving the raw policy — the network moves away from human imitation
 ## 5. Kaggle submissions
 | # | Package | Contents | Ladder |
 |---|---|---|---|
-| 1 | `submission/sub1_mcts_crustle.tar.gz` | value-FT net + MCTS (4 worlds, ≤2 s/decision) + Crustle | **~750** (after ~6 h) |
+| 1 | `submission/sub1_mcts_crustle.tar.gz` | value-FT net + MCTS (4 worlds, ≤2 s/decision) + Crustle | **~737** (after ~10 h) |
 | 2 | `submission/sub2_mcts_ogerpon.tar.gz` | same agent + Teal Mask Ogerpon deck | (optional) |
-| 3 | `submission/sub3_mcts1w_crustle.tar.gz` | value-FT net + MCTS **1 world** (≤2 s/decision) + Crustle | **~775** (after ~6 h) |
-| 4 | `submission/sub4_exit2_1w_crustle.tar.gz` | ExIt-2 net + MCTS 1 world + Crustle | (built, being validated) |
+| 3 | `submission/sub3_mcts1w_crustle.tar.gz` | value-FT net + MCTS **1 world** (≤2 s/decision) + Crustle | **~768** (after ~10 h) |
+| 4 | `submission/sub4_exit2_1w_crustle.tar.gz` | ExIt-2 net + MCTS 1 world + Crustle | **~770** (after ~2 h) — deployed h2h vs sub3 config: 0.515 [0.446, 0.583], 200 games |
+| 5 | `submission/sub5_exit2_1w_3s_lib.tar.gz` | sub4 + time cap 3 s (reserve 60 s, divisor 60) + 120-deck opponent library | h2h vs sub4 config: 0.538 [0.460, 0.613], +26 Elo, 160 games; mean 185 s / max 300 s thinking per game; ladder ~653 after 1 h (still rating) |
 
 Previous system on the same ladder: 650+ (best legacy) / ~500 (latest legacy).
 Local prediction vs ladder: 1 world > 4 worlds locally (+46 Elo, 400 games) and on the ladder (775 vs 750) —
 unlike the legacy evaluation, which ranked the two legacy agents in the wrong order.
+
+## 6. Ladder forensics (sub1 + sub3, 162 ladder episodes)
+- No errors or timeouts from our agent; the two INVALID episodes were opponents forfeiting.
+- Matches are best-of-3; the 600 s time bank **resets every game** (remainingOverageTime returns to 600 at each
+  game boundary); with a 2 s cap we used ~350 s per match and never went below ~400 s remaining.
+- Score by opponent rating: 600s 0.78 (36 eps), 700s 0.48 (81), 800s 0.36 (25), 900+ 0.00 (7).
+- Many ladder opponents play decks outside our 8-deck library -> library expanded to 120 mined decklists (sub5).

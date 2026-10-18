@@ -1,0 +1,15 @@
+{
+ "init": "experiments/train_exit2/last.pt",
+ "name": "exit3",
+ "selfplay": "data/exit3",
+ "shards": "data/shards",
+ "epochs": 3,
+ "bs": 512,
+ "lr": 0.00015,
+ "w_value": 0.25,
+ "w_count": 0.2,
+ "w_belief": 0.05,
+ "loser_weight": 0.5,
+ "w_sp": 1.0,
+ "w_sp_pol": 1.0
+}

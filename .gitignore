@@ -25,3 +25,8 @@ _sync/
 __pycache__/
 *.pyc
 .vscode/
+report/*.aux
+report/*.log
+report/*.bbl
+report/*.blg
+report/*.out
