@@ -91,7 +91,8 @@ class MCTSAgent:
     name = "mcts"
 
     def __init__(self, model, deck, sims=96, worlds=4, c_puct=1.25, belief="learned", time_budget=None,
-                 max_chain=60, seed=None, device="cpu", library=None, use_overage=False, fpu=0.15, max_time=2.0, sample_temp=0.0):
+                 max_chain=60, seed=None, device="cpu", library=None, use_overage=False, fpu=0.15, max_time=2.0, sample_temp=0.0,
+                 reserve=90.0, divisor=45.0, library_dir=None):
         self.model = model
         self.deck = list(deck)
         self.sims = sims
@@ -103,10 +104,12 @@ class MCTSAgent:
         self.rng = random.Random(seed)
         self.nrng = np.random.default_rng(seed)
         self.device = device
-        self.lib = library or DeckLibrary()
+        self.lib = library or DeckLibrary(library_dir or "decks")
         self.use_overage = use_overage
         self.fpu = fpu
         self.max_time = max_time
+        self.reserve = reserve
+        self.divisor = divisor
         self.sample_temp = sample_temp
         self.last_pi = None
         self.stats = Counter()
@@ -294,7 +297,7 @@ class MCTSAgent:
             rem = obs.get("remainingOverageTime")
             if rem is None:
                 return self.max_time
-            return max(0.05, min(self.max_time, (float(rem) - 90.0) / 45.0))
+            return max(0.05, min(self.max_time, (float(rem) - self.reserve) / self.divisor))
         return self.time_budget
 
     def act(self, obs):

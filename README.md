@@ -28,6 +28,12 @@ _archive/        previous code base (reference only)
 experiments/     logs, metrics, gauntlet results, figures
 ```
 
+## Setup
+- Python 3.11, PyTorch 2.5 (CUDA optional), numpy, matplotlib.
+- The competition engine (`cg/`) and card data are **not** included (the engine license forbids
+  redistribution): download them from the Kaggle competition page and place `cg/` at the repo root.
+- Replays: `data/replays/*.json` + `data/replays/manifest.csv` (downloaded from Kaggle's episode API).
+
 ## Reproduce
 ```
 python -m ptcg.parse --top 3000 --workers 20 --out data/shards

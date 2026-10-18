@@ -54,7 +54,9 @@ Head-to-head (mirror, Crustle vs Crustle):
 | MCTS-64 learned-belief worlds vs uniform (count-based) worlds | 400 | 0.479 [0.430, 0.528] | −15 [−49, +19], SPRT H0 |
 | MCTS-256 learned-belief worlds vs uniform worlds | 208 | 0.517 [0.449, 0.584] | +12 [−35, +59] |
 | MCTS-64, 4 worlds vs 1 world (same total simulations) | 300 | **0.393** [0.340, 0.450] | **−75** [−115, −35], SPRT H0 |
-| deployed (time bank), 1 world vs 4 worlds | 200 | 0.558 [0.488, 0.625] | +40 [−8, +88] |
+| deployed (time bank), 1 world vs 4 worlds (run 1) | 200 | 0.558 [0.488, 0.625] | +40 [−8, +88] |
+| deployed (time bank), 1 world vs 4 worlds (run 2) | 200 | 0.575 [0.506, 0.641] | +53 [+4, +101] |
+| **deployed, 1 vs 4 worlds, pooled** | **400** | **0.566** [0.517, 0.614] | **+46** |
 
 Seed robustness of the search gain (seed-1 network, Crustle vs pool): policy 0.792 [0.736, 0.838] → MCTS-64 0.850 [0.799, 0.890]
 (seed 0: 0.750 → 0.802).
@@ -73,6 +75,16 @@ outperforms several shallow determinized trees, which also explains why better o
 Offline: ExIt net replay top-1 69.0% (base 70.1%), value Brier 0.2187 (base 0.2258).
 One round with 16-simulation targets did not improve playing strength.
 
+### Expert iteration, stronger targets (1,600 MCTS self-play games, 64 sims, 1 world)
+| A vs B (Crustle mirror) | games | score A [95% CI] | Elo |
+|---|---|---|---|
+| ExIt-2 policy vs base policy | 400 | 0.503 [0.454, 0.551] | +2 [−32, +36] |
+| **ExIt-2 + MCTS-64 (1 world) vs base + MCTS-64 (1 world)** | **300** | **0.570** [0.513, 0.625] | **+49** [+9, +89] |
+
+Offline: ExIt-2 replay top-1 68.8%, NLL 0.888, value Brier 0.2210.
+With better search targets, expert iteration improves the *search* agent (better priors/values for the tree)
+without improving the raw policy — the network moves away from human imitation towards what search needs.
+
 ## 4c. Seed reproducibility (offline, test split)
 | model | top-1 | NLL | value Brier | belief AUROC |
 |---|---|---|---|---|
@@ -83,6 +95,11 @@ One round with 16-simulation targets did not improve playing strength.
 ## 5. Kaggle submissions
 | # | Package | Contents | Ladder |
 |---|---|---|---|
-| 1 | `submission/sub1_mcts_crustle.tar.gz` | value-FT net + MCTS (4 worlds, ≤2 s/decision) + Crustle | (pending upload) |
+| 1 | `submission/sub1_mcts_crustle.tar.gz` | value-FT net + MCTS (4 worlds, ≤2 s/decision) + Crustle | **~750** (after ~6 h) |
 | 2 | `submission/sub2_mcts_ogerpon.tar.gz` | same agent + Teal Mask Ogerpon deck | (optional) |
-| 3 | `submission/sub3_mcts1w_crustle.tar.gz` | value-FT net + MCTS **1 world** (≤2 s/decision) + Crustle | (pending upload) |
+| 3 | `submission/sub3_mcts1w_crustle.tar.gz` | value-FT net + MCTS **1 world** (≤2 s/decision) + Crustle | **~775** (after ~6 h) |
+| 4 | `submission/sub4_exit2_1w_crustle.tar.gz` | ExIt-2 net + MCTS 1 world + Crustle | (built, being validated) |
+
+Previous system on the same ladder: 650+ (best legacy) / ~500 (latest legacy).
+Local prediction vs ladder: 1 world > 4 worlds locally (+46 Elo, 400 games) and on the ladder (775 vs 750) —
+unlike the legacy evaluation, which ranked the two legacy agents in the wrong order.
