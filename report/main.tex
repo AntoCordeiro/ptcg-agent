@@ -25,43 +25,47 @@
 
 \dlaicorrespondingauthor{Antonio Cordeiro}{cordeiro.1999975@studenti.uniroma1.it}
 
-\vskip 0.3in
+\vskip 0.15in
 ]
 
 \printAffiliationsAndNotice{}
 
 \begin{abstract}
-The Kaggle \emph{PTCG AI Battle Challenge} asks for an agent that plays the Pok\'emon Trading Card Game, where cards are hidden, draws are random and the legal moves change at every turn. A first attempt trained a large transformer to copy the moves of top players and then refined it with reinforcement learning; it copied 63\% of expert moves but never rated above 650 on the ladder. A second attempt uses a small network to guide a tree search on the game's own simulator, so the agent looks ahead before each move. Measured over hundreds of games per comparison, search raises the score against a fixed set of opponents from 0.75 to 0.90 and the ladder rating to $\approx$770. A network head that guesses the opponent's hand predicts it better than card counting, but feeding its guesses to the search wins no more games.
+This work studies agents for the Kaggle \emph{PTCG AI Battle Challenge}, a rated ladder of Pok\'emon Trading Card Game programs. A first agent, \emph{DualCross}, imitates top-rated players with a transformer refined by reinforcement learning; it matches 63\% of expert decisions but rates only 650. A second agent, \emph{PTCGNet}, uses a smaller network to guide a Monte Carlo tree search on the game simulator. Search raises the fraction of games won against six fixed opponents from 0.75 to 0.90 and the rating to $\approx$770. Predicting the opponent's hand beats card counting but does not help the search.
 \end{abstract}
 
 % ------------------------------------------------------------------------------
 \section{Introduction}
-At every decision the agent receives the board, its own hand, a log of past events and the list of legal options (play, attach, evolve, attack, pick a target, pick $k$ of $n$ cards), and answers with the indices of the options it picks. Three things make this hard: the opponent's hand and both deck orders are hidden, draws and coin flips are random, and the set of options is different every time. Kaggle provides about 5k replays of high-rated games, a C++ simulator that can play a game forward from any state once the hidden cards are filled in, and a rated ladder; each agent has 2 CPUs and a 600\,s thinking budget per game.
+In the Pok\'emon Trading Card Game (PTCG) two players with 60-card decks use Pok\'emon, energy and trainer cards to knock out the opponent's Pok\'emon; six knock-outs win. On Kaggle, agents play rated best-of-three matches; at each decision an agent sees its own view of the game and a list of legal options (play a card, attach energy, attack, choose $k$ of $n$ cards, \dots) and returns the chosen ones.
 
-The report follows the project in order: a first agent that learned only from data (\S\ref{sec:gen1}), why its results misled, and the second agent that plans with the simulator and was evaluated far more carefully (\S\ref{sec:gen2}). Code: \url{https://github.com/AntoCordeiro/ptcg-agent}.
+The task combines \emph{hidden information} (the opponent's hand and both deck orders), \emph{stochasticity} (shuffled decks, random card effects) and a \emph{variable action space}: the options change at every decision, ruling out a fixed output layer. Kaggle gives 5k replays of top games and a simulator that implements every card effect and can continue a game from any state once the hidden cards are fixed; agents get 2 CPU cores and 600\,s per game.
 
-\paragraph*{Related work.} The second agent follows AlphaGo/AlphaZero, where a network proposes moves and evaluates positions inside a PUCT tree search \cite{silver2016mastering,silver2018general}, and expert iteration, where the network is then trained to imitate the search \cite{anthony2017thinking}. For hidden information it uses determinization, i.e.\ searching sampled guesses of the hidden state \cite{long2010understanding,cowling2012information}.
+Two agents, named after their networks, were built in turn: \emph{DualCross} (\S\ref{sec:gen1}) learns from replays; \emph{PTCGNet} (\S\ref{sec:gen2}) plans with the simulator. Code: \url{https://github.com/AntoCordeiro/ptcg-agent}.
 
-% ------------------------------------------------------------------------------
-\section{First attempt: learning to imitate}\label{sec:gen1}
-The natural starting point was imitation. Every decision in the top $\approx$650 replays became a training example (state and chosen option), 75k in total. A transformer \cite{vaswani2017attention,vinyals2019grandmaster} (\emph{PTCGDualCrossNet}, $d{=}256$) reads one token per card in play or in hand and one token per legal option, described by 332 hand-crafted features, and scores each option; letting option tokens attend to card tokens is what lets it handle a different set of options at every turn. Training (behavioural cloning) pushed it to score the expert's choice highest.
-
-To go beyond copying, three refinements followed: offline RL with IQL \cite{kostrikov2022offline}, which weights each copied move by how much it seemed to help win; online RL with PPO \cite{schulman2017proximal}, where the agent played against older versions of itself; and an average of the weights of these models (WiSE-FT \cite{wortsman2022robust}). When playing, the agent took the network's top option and used the simulator only to spot an immediately winning attack, avoid emptying its own deck and re-rank near-ties, at about 6\,ms per move.
-
-The most useful step turned out to be a data fix: each replay observation had been paired with the previous action instead of the next one, and correcting this raised expert-move accuracy from 40.9\% to 63.3\%. The RL refinements added almost nothing (IQL 63.4\%). Worse, the local tests between versions, 20--40 games each, pointed the wrong way: a version that looked +240 Elo stronger scored 500 on the ladder against 650 for its predecessor, and over 350 local games the 650-rated version scores only 0.32. Two lessons shaped the second attempt: the agent used under 1\% of its thinking time while a perfect simulator sat unused, and tests need many more games and fixed opponents.
+\section{Related work}\label{sec:related}
+Both agents feed the game as tokens to a transformer \cite{vaswani2017attention}, as AlphaStar does for StarCraft \cite{vinyals2019grandmaster}. DualCross uses behavioural cloning (BC), i.e.\ supervised learning on expert decisions \cite{pomerleau1991efficient}, offline RL with IQL \cite{kostrikov2022offline}, online RL with PPO \cite{schulman2017proximal} and weight averaging (WiSE-FT) \cite{wortsman2022robust}. PTCGNet follows AlphaZero, where a network gives priors and values to a PUCT tree search \cite{silver2016mastering,silver2018general}, expert iteration \cite{anthony2017thinking}, and determinization, i.e.\ searching on sampled hidden cards \cite{long2010understanding,cowling2012information}. Appendix~A describes these methods.
 
 % ------------------------------------------------------------------------------
-\section{Second attempt: a small network that guides search}\label{sec:gen2}
-\paragraph*{Network.} The input keeps the card and option tokens but drops the hand-crafted features: each card token carries its identity and a few raw numbers (HP, damage, attached energy, zone, owner), and each option token is linked to the cards it acts on. Card effects need no hand-written description: the simulator plays them out during search. A 4-layer transformer ($d{=}192$, 2.6M parameters, fast on one CPU core) has four outputs: a score for each option (policy), the probability of winning (value), how many cards to pick in a $k$-of-$n$ choice (count), and which cards the opponent is holding (belief). The belief label comes for free, because replays store each player's own view, hand included. Training used 453k decisions from the top 3{,}000 replays, split 90/5/5 by game so that test positions come from unseen games. The value output first memorised the outcomes of the 3k training games, so it was retrained on 8k games the network played against itself, still imitating replays.
+\section{DualCross: imitation and reinforcement learning}\label{sec:gen1}
+The training set holds the 75k decisions of the $\approx$650 best-rated replays: observations paired with the option chosen by the player (the expert). A transformer ($d{=}256$) represents each card in play or in hand as a token of 332 hand-crafted features (Appendix~B) and each legal option as another token. A cross-attention decoder lets every option token attend to the card tokens, so an option such as ``attach energy to this Pok\'emon'' gathers information about the cards it involves; one score is output per option. BC trained it to score the expert's option highest (63.3\% top-1 on held-out decisions). IQL then imitated more strongly the decisions with higher estimated advantage (63.4\%), PPO continued by self-play against earlier checkpoints, and WiSE-FT averaged the weights of these models. At play time the agent took the top-scored option after a few one-step simulator checks (Appendix~B), using under 1\% of the time budget.
 
-\paragraph*{Search.} Before each real decision with at least two options, the agent fills in the hidden cards with a plausible guess, a \emph{world}: its own deck order and prizes are shuffled from its unseen cards; the opponent's decklist is the one among 120 lists collected from replays that best matches the cards seen so far; the opponent's hand is drawn uniformly from the unseen cards or according to the belief output. The world is handed to the simulator and a Monte Carlo tree search explores moves for both players. The policy decides which moves are worth trying and the value scores positions, so games need not be played to the end. The most explored move is played; each decision gets a share of the remaining time bank. Finally, the network was trained to imitate the search's choices from self-play games (expert iteration), to point the search to better moves.
+Versions were compared in 20--40 games against each other, which did not predict the ladder: the best local version rated 500, an earlier one 650. Samples this small are noisy, and own checkpoints are unrepresentative opponents; PTCGNet fixes both and uses the idle time to plan.
 
-\paragraph*{Evaluation.} Offline metrics use held-out games. Every playing comparison uses 200--400 games on a fixed set of six opponents (two first-attempt agents and the network piloting four popular decks), the real time budget, 95\% Wilson intervals, and a sequential test (SPRT) to decide when a difference is real.
+% ------------------------------------------------------------------------------
+\section{PTCGNet: network-guided search}\label{sec:gen2}
+\paragraph*{Network.} PTCGNet drops hand-crafted features: a card token sums a learned card-identity embedding, the card's static attributes from the simulator database and a few dynamic values (zone, owner, HP, damage, energy). An option token encodes the option type plus the embeddings of the card it acts on and of its target, so each option contains the cards it involves before any attention (Appendix~B). The unordered set of tokens enters a 4-layer pre-norm transformer encoder ($d{=}192$). Four heads follow: \emph{policy} (a score per option), \emph{value} (win probability), \emph{count} (how many cards to take when a decision allows $k_{\min}$ to $k_{\max}$) and \emph{belief} (the opponent's hand). Replays store both players' views, so the opponent's true hand is a training label only; the input is always the acting player's view.
+
+The policy was trained on 453k decisions from the 3{,}000 highest-rated replays, split 90/5/5 by game, so that validation and test decisions ($\approx$20k each) come from unseen games. Trained on replays, the value head memorised the 2.7k training outcomes and did worse than a constant, so, as in AlphaGo, it was fine-tuned on 8k games of the network against itself, keeping the replay policy loss.
+
+\paragraph*{Search.} At each decision with two or more options the agent samples a \emph{world}, an assignment of all hidden cards consistent with its view: its unseen cards are shuffled into deck and prizes; the opponent's decklist is the one, among 120 mined from replays, that best matches the visible cards; the opponent's hand is drawn from the rest, uniformly or weighted by the belief head. On this world the simulator runs a tree search over both players' moves, the opponent being modelled by the same network. Each simulation descends the tree by the PUCT rule, favouring options with high prior and value, and scores the new position with the value head rather than playing to the end, which would cost hundreds of steps for one noisy outcome. When the decision's time share ends (Appendix~D), the most visited, i.e.\ best evaluated, option is played; $k$-of-$n$ choices use the policy and count heads. Expert iteration retrains the policy on the visit distributions of search self-play.
+
+\paragraph*{Evaluation protocol.}\label{sec:eval}
+Playing strength is measured by the \emph{score}, the fraction of games won. The main benchmark, the \emph{gauntlet}, is a fixed pool of six opponents: the two DualCross submissions (ladder 650 and 500) and the raw PTCGNet policy piloting four popular decks (Dragapult, Ogerpon, Clefairy, Kangaskhan/Crustle). All runs use 200--400 games with alternating first player and the 600\,s limit, and report 95\% Wilson intervals \cite{wilson1927probable} and the Elo difference $400\log_{10}(s/(1-s))$; a sequential test (SPRT) \cite{wald1945sequential} stops when a difference is significant. Offline metrics are top-1 agreement with the expert (policy), Brier score, the squared error of the win probability \cite{brier1950verification} (value), and AUROC against the true hand (belief). The ladder rating is Kaggle's TrueSkill-like skill estimate $\mu$ \cite{herbrich2006trueskill}, starting at 600.
 
 % ------------------------------------------------------------------------------
 \section{Results}
 \begin{table}[t]
-\caption{Gen-1/Gen-2: first/second attempt. top-1: expert moves matched on held-out data. Gauntlet: score against the six fixed opponents (95\% CI). Ladder: Kaggle rating $\mu$ (start 600).}
+\caption{Summary: top-1 on held-out decisions, gauntlet score (95\% CI) and ladder rating $\mu$.}
 \label{tab:gen}
 \begin{center}
 \begin{small}
@@ -69,14 +73,13 @@ The most useful step turned out to be a data fix: each replay observation had be
 \toprule
 System & top-1 & gauntlet & ladder \\
 \midrule
-Gen-1 BC / IQL & 63.3 / 63.4\% & -- & -- \\
-Gen-1 WiSE + light search & -- & -- & 650 \\
-Gen-1 final (search v4) & -- & -- & 500 \\
+DualCross, WiSE-FT & -- & -- & 650 \\
+DualCross, final & -- & -- & 500 \\
 \midrule
-Gen-2 policy only & 70.0\% & .75 [.69,.80] & -- \\
-Gen-2 MCTS, 4 worlds, 2\,s & -- & .90 [.85,.94] & 737 \\
-Gen-2 MCTS, 1 world, 2\,s & -- & -- & 768 \\
-\, + ExIt, 2--3\,s, deck library & -- & -- & \textbf{770} \\
+PTCGNet, policy only & 70.0\% & .75 [.69,.80] & -- \\
+MCTS, 4 worlds & -- & .90 [.85,.94] & 737 \\
+MCTS, 1 world & -- & -- & 768 \\
+\, + ExIt, 120-deck library & -- & -- & \textbf{770} \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -84,64 +87,54 @@ Gen-2 MCTS, 1 world, 2\,s & -- & -- & 768 \\
 \vspace{-0.4cm}
 \end{table}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.56\linewidth]{figures/search_scaling.png}
-\vspace{-0.3cm}
-\caption{Gauntlet score vs search budget (Crustle deck, 180--240 games per point, 95\% CI); ``time bank'' is the deployed agent.}
-\label{fig:scaling}
-\vspace{-0.45cm}
-\end{figure}
+\paragraph*{Network.} The policy agrees with the expert on 70.0\% of test decisions (21.7\% at random). Self-play makes the value beat a constant (Brier .254 $\to$ .226 vs .249). The belief reaches AUROC .752, vs .711 for counting the opponent's unseen cards. Piloted by the policy against the gauntlet, Kangaskhan/Crustle scored .73 and Dragapult, the most common top deck, .49 (Appendix~C): the deck must suit the agent, so Crustle was used.
 
-\paragraph*{What the network learned.} The policy picks the expert's move 70.0\% of the time (21.7\% at random) and the self-play value predicts outcomes better than a constant (Brier .226 vs .249, Tab.~\ref{tab:abl}). The deck that dominates top replays, Dragapult, scores only 0.49 with this network, Kangaskhan/Crustle 0.73 (240 games each); the agent plays Crustle.
+\paragraph*{Search.} Search is the main source of strength (Fig.~\ref{fig:scaling}, Appendix~C): the gauntlet score goes from .75 (policy) to .87 (256 simulations) and .90 (deployed agent), which beats its own policy .59 (+65 Elo): a weak value head suffices.
 
-\paragraph*{Search.} Looking ahead is where the strength comes from (Fig.~\ref{fig:scaling}): 0.75 without search, 0.87 with 256 simulations, 0.90 with the time-bank agent, and the search agent beats its own network 0.59 head to head. Two results about hidden information were unexpected. The belief output guesses the opponent's hand better than counting (AUROC .752 vs .711), yet worlds drawn from it win no more games (0.48). And four worlds lose to one world with the same total effort (0.39, $-75$ Elo): each of the four trees is a quarter as deep, and depth matters more than exact knowledge of the hand. Expert iteration helped once (+49 Elo for the search agent) and then stopped improving.
+\paragraph*{Hidden information.} Search depth matters more than accurate hidden cards: sampling the hand from the belief head does not change the score (.48, 400 games), and four worlds with a quarter of the simulations each lose to one deeper search (.39, $-75$ Elo), as on the ladder (737 vs 768).
+
+\paragraph*{Expert iteration and time.} Expert iteration with 64-simulation targets (16 did not help) improved the search agent (.57, +49 Elo, 300 games) but not the raw policy (.50): it learned priors for search, not imitation. A further round, and doubling the time cap from 3 to 6\,s, gave no gain (.50; .49 [.43,.56]).
 
 % ------------------------------------------------------------------------------
 \section{Discussion and conclusions}
-On the ladder the second agent rates 737--770 against 500--650 for the first (Tab.~\ref{tab:gen}), and the one local ranking that could be checked there (one world better than four) held (768 vs 737). Better imitation and RL did not make a better player; a smaller network guiding search on the real engine did. Limitations: four of the six test opponents share the agent's network and chose its deck, so the local score saturates at 0.90, while opponents rated 800+ remain hard (0.36--0.52).
+Better imitation and RL did not make a stronger player; a smaller network guiding search did (650 $\to$ $\approx$770). As neither belief, more expert iteration nor more time helps, the network and opponent model are now the limit. The gauntlet, mostly built on the agent's own network, saturates near .90, while 800-rated ladder opponents win half the time: stronger test opponents come next.
 
 % ------------------------------------------------------------------------------
 \section{Statement on the use of AI}\label{sec:ai}
 I used AI assistants throughout the project, in two phases.
 
-\emph{First attempt (\S\ref{sec:gen1}).} My coding assistant was Gemini 3.8 Flash (Google). It wrote a large part of the code (replay parsing, feature extraction, the relational transformer, the BC/IQL/PPO training scripts, the light search and the deck tournament), and it helped me debug the pipeline and go through Kaggle replays of lost games.
+\emph{DualCross (\S\ref{sec:gen1}).} Gemini 3.8 Flash wrote a large part of the code (replay parsing, feature extraction, the relational transformer, the BC/IQL/PPO training scripts, the light search and the deck tournament), and it helped me debug the pipeline and go through Kaggle replays of lost games.
 
-\emph{Second attempt (\S\ref{sec:gen2}) and report.} I then moved to Claude Opus 5.5 (Anthropic), working as an agentic assistant. It reviewed the first system and helped me plan the restart, wrote most of the new code (parser, network, MCTS, evaluation harness, submission builder), ran training and evaluation jobs on my machine through a job queue, analysed logs and ladder episodes, made the figures and helped me draft and edit this report.
+\emph{PTCGNet (\S\ref{sec:gen2}) and report.} I then moved to Claude Opus 5.5. It reviewed the first system and helped me plan the restart, wrote most of the new code (parser, network, MCTS, evaluation harness, submission builder), analysed logs and ladder episodes, made the figures and helped me draft and edit this report.
 
-The goals and the main design decisions were mine: what to keep, what to drop, which agents to submit. I ran the Kaggle submissions, reviewed the code and checked every reported number against the logged outputs in the repository (\texttt{experiments/}, \texttt{RESULTS.md}). I understand the methods and the code, can explain them, and take full responsibility for the content of this report.
+The goals and the main design decisions were mine. I ran the Kaggle submissions, reviewed the code, and rewrote and corrected the report.
 
 \bibliography{references.bib}
 \bibliographystyle{dlaiml2026}
 
 \clearpage
 \appendix
-\section*{Appendix A: first-generation details}
-\begin{table}[h]
-\caption{Gen-1 local Bradley--Terry ladder (mirror deck, 20 games per pair; Elo relative to the mean). Note the small samples; the top-rated agents later scored lower on the ladder than \texttt{wise}.}
-\begin{center}\begin{small}
-\begin{tabular}{@{}lrr@{}}
-\toprule
-Agent & BT Elo & mirror win rate \\
-\midrule
-self-play PPO v3 & +180.5 & 70.6\% \\
-search v4 (WiSE v3) & +120.7 & 62.5\% \\
-WiSE v3 (IQL + PPO + IQL-rel.) & +120.7 & 62.5\% \\
-IQL v3 & +116.1 & 61.9\% \\
-IQL relational & +111.6 & 61.3\% \\
-BC & +107.1 & 60.6\% \\
-WiSE v1 (ladder 650) & +44.0 & 51.9\% \\
-heuristic & $-$296.1 & 15.6\% \\
-first submission (ladder 250--400) & $-$504.6 & 3.1\% \\
-\bottomrule
-\end{tabular}
-\end{small}\end{center}
-\end{table}
-Other Gen-1 components: a championship-deck tournament over decks reconstructed from top replays (16 games per pair, which selected Hydrapple/Ogerpon); a card tracker with archetype inference; rules for multi-select counts (e.g.\ attaching 2--5 energies); and forensic analysis of ladder losses, which found the replay misalignment, a module-name collision that crashed a submission, belief-state carry-over between games of a match, and deck-search choices blind to evolution lines. The recurrent policy tied the memoryless one (47.5\%, CI [32.9, 62.5], 40 games); the asymmetric (oracle) critic did not fit values better than the observable critic.
+\section*{Appendix A: methods}\label{app:methods}
+\paragraph*{Behavioural cloning (BC).} Supervised learning of a policy $\pi(a\mid s)$ by minimising the cross-entropy between the predicted distribution over legal options and the option chosen in the replay.
+\paragraph*{Implicit Q-learning (IQL).} An offline RL method that fits a state value $V(s)$ and an action value $Q(s,a)$ from the recorded games only, and then trains the policy by advantage-weighted regression: the imitation loss of each recorded action is multiplied by $\exp(\beta(Q(s,a)-V(s)))$, so actions that led to better outcomes than expected are imitated more strongly.
+\paragraph*{PPO.} An online policy-gradient method: the agent plays games, estimates the advantage of each action (here with generalised advantage estimation), and updates the policy with a clipped objective that prevents large changes per update. Opponents were sampled from a league of earlier checkpoints, and a BC term kept the policy close to expert play.
+\paragraph*{WiSE-FT.} The weights of a fine-tuned model and of the model it started from are averaged, $\theta=(1-\alpha)\theta_0+\alpha\theta_1$; when the two are close in weight space the average often generalises better than either. Here the BC, IQL and PPO models were averaged.
+\paragraph*{PUCT search.} Each tree node stores, for each option $a$, a prior $P(a)$ from the policy head, a visit count $N(a)$ and a mean value $Q(a)$. A simulation selects at each node $\arg\max_a Q(a)+c\,P(a)\sqrt{\sum_b N(b)}/(1+N(a))$ ($c{=}1.25$), expands the first new position, evaluates it with the value head, and adds the value to every node on the path, with the sign flipped at the opponent's nodes. Forced moves and $k$-of-$n$ selections inside the tree are played by the policy, so the depth is spent on real choices.
+\paragraph*{Expert iteration (ExIt).} The search acts as an expert that improves on the network; the network is trained to reproduce the search's visit distribution (and the game outcome for the value), and the improved network is used in the next round of search.
 
-\section*{Appendix B: additional second-generation results}
+\section*{Appendix B: inputs of the networks}\label{app:features}\label{app:gen1}
+\paragraph*{DualCross.} Up to 60 state tokens and 80 option tokens of 332 hand-crafted features each: card statistics, rule flags, damage formulas written by hand for 12 attacks, frozen 384-d text embeddings of the card descriptions, and the output of a hand-written card tracker. At play time the simulator was used only to play an immediately winning attack, to avoid emptying the agent's own deck, and, when the two best options were within 0.15 in probability, to simulate both one step and keep the one the value head preferred. Eight symbolic relations per (option, card) pair (e.g.\ ``this option evolves this card'') were added as attention biases in the cross-attention decoder, and a pointer decoder selected cards one at a time in $k$-of-$n$ decisions.
+\paragraph*{PTCGNet.} \emph{Card tokens} ($\leq$64): every Pok\'emon in play, the cards in the agent's hand, the stadium, cards revealed by an effect, and any card an option refers to; 38 features (zone, owner, HP, damage, attached energy by type, tools, evolution stage, status conditions, bench position) plus the card-identity embedding and a projection of the card's static attributes (type, HP, weakness, resistance, retreat cost, attack costs and damage). \emph{Option tokens} ($\leq$80): 35 features (17 option types such as play, attach, evolve, attack, retreat, end turn; counts; energy type) plus embeddings of the card it acts on, its target, and the attack if any. \emph{Global token}: turn, per-player deck/hand/prize/bench/discard sizes, flags for actions already taken this turn, and the type of selection requested. \emph{Discard tokens}: the mean embedding of each player's discard pile. The same encoding function is used in training, in search and in the submitted agent.
+
+\section*{Appendix C: additional results}\label{app:abl}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.6\linewidth]{figures/search_scaling.png}
+\caption{Gauntlet score vs search budget (180--240 games per point, 95\% CI); ``time bank'' is the deployed agent.}
+\label{fig:scaling}
+\end{figure}
 \begin{table}[h]
-\caption{Gen-2 offline results (held-out games) and online ablations (score of A vs B, 95\% CI).}
+\caption{PTCGNet: offline results on held-out games and online comparisons (score of A vs B, 95\% CI, number of games).}
 \label{tab:abl}
 \begin{center}
 \begin{small}
@@ -151,16 +144,41 @@ Policy top-1, main phase $\geq$5 options (uniform) & 60.7\% (11.6\%) \\
 Value Brier: replay-only / +self-play (const.) & .254 / .226 (.249) \\
 Belief AUROC: learned / count w/ true list & .752 / .711 \\
 \midrule
-MCTS-64 vs own policy (200 games) & .59 [.52, .66] \\
-learned vs count-based hand sampling (400) & .48 [.43, .53] \\
-4 worlds vs 1 world, equal sims (300) & .39 [.34, .45] \\
+MCTS-64 vs own policy (200) & .59 [.52, .66] \\
+learned vs uniform hand sampling (400) & .48 [.43, .53] \\
+learned vs uniform, 256 simulations (208) & .52 [.45, .58] \\
+4 worlds vs 1 world, equal simulations (300) & .39 [.34, .45] \\
+deployed agent, 1 vs 4 worlds (400) & .57 [.52, .61] \\
+ExIt-1 + MCTS vs base + MCTS (304) & .47 [.41, .52] \\
 ExIt-2 + MCTS vs base + MCTS (300) & .57 [.51, .62] \\
+ExIt-2 policy vs base policy (400) & .50 [.45, .55] \\
 ExIt-3 + MCTS vs ExIt-2 + MCTS (300) & .50 [.45, .56] \\
 searching $k$-of-$n$ choices vs policy (400) & .48 [.43, .53] \\
+$c=0.7$ vs $1.25$ (240) & .51 [.45, .58] \\
+$c=2.5$ vs $1.25$ (240) & .43 [.37, .49] \\
+3\,s cap + 120-deck library vs 2\,s, 8 decks (160) & .54 [.46, .61] \\
+6\,s cap vs 3\,s cap (220) & .49 [.43, .56] \\
 \bottomrule
 \end{tabular}
 \end{small}
 \end{center}
+\end{table}
+\begin{table}[h]
+\caption{Deck selection: the PTCGNet policy piloting each deck against the gauntlet (240 games each).}
+\begin{center}\begin{small}
+\begin{tabular}{@{}lr@{}}
+\toprule
+Mega Kangaskhan ex / Crustle & .73 [.67, .78] \\
+Teal Mask Ogerpon ex & .65 [.59, .71] \\
+Hydrapple ex & .64 [.58, .70] \\
+Marnie's Grimmsnarl ex & .59 [.53, .65] \\
+Dragapult ex & .49 [.43, .56] \\
+Dragapult / Clefairy & .29 [.23, .35] \\
+Lillie's Clefairy ex & .28 [.23, .34] \\
+Raging Bolt / Ogerpon & .20 [.15, .26] \\
+\bottomrule
+\end{tabular}
+\end{small}\end{center}
 \end{table}
 \begin{figure}[h]
 \centering
@@ -174,35 +192,29 @@ searching $k$-of-$n$ choices vs policy (400) & .48 [.43, .53] \\
 \caption{Validation curves with and without the auxiliary belief head (no effect on the policy).}
 \end{figure}
 \begin{table}[h]
-\caption{Further ablations (Crustle mirror; score of A vs B, 95\% CI).}
+\caption{DualCross: local Bradley--Terry ratings (mirror deck, 20 games per pair; Elo relative to the mean). The top-rated agents later rated lower on the ladder than WiSE v1.}
 \begin{center}\begin{small}
-\begin{tabular}{@{}lr@{}}
+\begin{tabular}{@{}lrr@{}}
 \toprule
-learned vs count-based hands, 256 sims (208) & .52 [.45, .58] \\
-deployed: 1 vs 4 worlds (400) & .57 [.52, .61] \\
-$c_{\text{puct}}=0.7$ vs $1.25$ (240) & .51 [.45, .58] \\
-$c_{\text{puct}}=2.5$ vs $1.25$ (240) & .43 [.37, .49] \\
-3\,s cap + 120-deck library vs 2\,s, 8 decks (160) & .54 [.46, .61] \\
-\bottomrule
-\end{tabular}
-\end{small}\end{center}
-\end{table}
-\begin{table}[h]
-\caption{Deck selection: the Gen-2 policy piloting each deck against the gauntlet (240 games each).}
-\begin{center}\begin{small}
-\begin{tabular}{@{}lr@{}}
-\toprule
-Mega Kangaskhan ex / Crustle & .73 [.67, .78] \\
-Teal Mask Ogerpon ex & .65 [.59, .71] \\
-Hydrapple ex & .64 [.58, .70] \\
-Marnie's Grimmsnarl ex & .59 [.53, .65] \\
-Dragapult ex & .49 [.43, .56] \\
-Lillie's Clefairy ex & .28 [.23, .34] \\
+Agent & BT Elo & win rate \\
+\midrule
+self-play PPO v3 & +180.5 & 70.6\% \\
+final (light search on WiSE v3) & +120.7 & 62.5\% \\
+WiSE v3 (IQL + PPO + IQL-rel.) & +120.7 & 62.5\% \\
+IQL v3 & +116.1 & 61.9\% \\
+IQL relational & +111.6 & 61.3\% \\
+BC & +107.1 & 60.6\% \\
+WiSE v1 (ladder 650) & +44.0 & 51.9\% \\
+heuristic & $-$296.1 & 15.6\% \\
+first submission (ladder 250--400) & $-$504.6 & 3.1\% \\
 \bottomrule
 \end{tabular}
 \end{small}\end{center}
 \end{table}
 
-\paragraph*{Training and compute.} Supervised training: AdamW (lr $4\cdot10^{-4}$, weight decay 0.05, batch 512, 12 epochs, loss weights policy 1, value 0.25, count 0.2, belief 0.05; moves of the losing player weighted 0.5), $\approx$45 min on one RTX 4070 Ti SUPER. Value fine-tuning and ExIt: 3 epochs, lr $1.5\cdot10^{-4}$, on 8k policy self-play games (value) and on 2{,}400 MCTS-16 / 1{,}600 MCTS-64 self-play games (ExIt rounds). Evaluation: 20 games in parallel on a 24-thread CPU, one CPU thread per agent, with Kaggle's 600\,s bank simulated per game (it resets each game of a best-of-3 match on the ladder); the deployed agent averages $\approx$2.4\,s per move.
+\section*{Appendix D: training and compute}\label{app:train}
+\paragraph*{Training.} Supervised training: AdamW (lr $4\cdot10^{-4}$, weight decay 0.05, batch 512, 12 epochs; loss weights policy 1, value 0.25, count 0.2, belief 0.05; decisions of the losing player weighted 0.5), $\approx$45 min on one RTX 4070 Ti SUPER; the checkpoint is selected on the validation split and the test split is used only for the reported metrics. Value fine-tuning and ExIt: 3 epochs, lr $1.5\cdot10^{-4}$, on 8k self-play games of the policy (value) and on 2{,}400 self-play games with 16 simulations (ExIt-1) and 1{,}600 with 64 simulations (ExIt-2).
+\paragraph*{Time management.} The time for a decision is $\max(0.05,\min(t_{\max},(T-r)/d))$ seconds, where $T$ is the remaining time bank of the game, $r$ a reserve and $d$ a divisor; the deployed agent uses $t_{\max}{=}3$\,s, $r{=}60$\,s, $d{=}60$, averages $\approx$2.4\,s per searched decision and uses about 185\,s of the 600\,s bank per game.
+\paragraph*{Evaluation.} 20 games run in parallel on a 24-thread CPU with one thread per agent; the time bank is simulated per game, as on Kaggle, where it resets at each game of a best-of-three match.
 
 \end{document}

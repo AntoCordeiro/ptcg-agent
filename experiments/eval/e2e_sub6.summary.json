@@ -1,0 +1,24 @@
+{
+ "games": 4,
+ "score": 0.75,
+ "ci95": [
+  0.30063605244263664,
+  0.9544139373553638
+ ],
+ "elo": 190.848501887865,
+ "elo_ci": [
+  -146.66487212656781,
+  528.3618759022982
+ ],
+ "W": 3,
+ "L": 1,
+ "D": 0,
+ "errors": 0,
+ "sprt_llr": 0.20990424827740495,
+ "sprt": "continue",
+ "sec_per_move_a": 4.398730281918293,
+ "a": "legacy:submission/sub6_exit2_1w_6s_lib",
+ "b": "legacy:baselines/legacy_v1approx",
+ "deck_a": "decks/other_top.csv",
+ "deck_b": null
+}
