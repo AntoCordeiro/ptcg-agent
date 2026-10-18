@@ -1,0 +1,24 @@
+{
+ "games": 8,
+ "score": 0.875,
+ "ci95": [
+  0.5291051942301385,
+  0.9775830911367039
+ ],
+ "elo": 338.0392160057028,
+ "elo_ci": [
+  20.24725002589758,
+  655.8311819855097
+ ],
+ "W": 7,
+ "L": 1,
+ "D": 0,
+ "errors": 0,
+ "sprt_llr": 1.1134224925827545,
+ "sprt": "continue",
+ "sec_per_move_a": 1.5517199810032098,
+ "a": "legacy:submission/sub3_mcts1w_crustle",
+ "b": "legacy:baselines/legacy_v1approx",
+ "deck_a": "decks/other_top.csv",
+ "deck_b": null
+}

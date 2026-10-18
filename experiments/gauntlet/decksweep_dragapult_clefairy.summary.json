@@ -1,0 +1,150 @@
+{
+ "cand": "policy:experiments/train_full_s0/best.pt",
+ "tag": "decksweep_dragapult_clefairy",
+ "pool": "standard",
+ "games_per_opp": 40,
+ "pooled": {
+  "games": 240,
+  "score": 0.2875,
+  "ci95": [
+   0.2339407405124222,
+   0.34775491765255034
+  ],
+  "elo": -157.65880786195942,
+  "elo_ci": [
+   -206.0626024203112,
+   -109.25501330360774
+  ],
+  "W": 69,
+  "L": 171,
+  "D": 0,
+  "errors": 0,
+  "sprt_llr": -11.808794856297625,
+  "sprt": "H0 accepted (<=0)",
+  "sec_per_move_a": 0.004738417024913565
+ },
+ "mean_score_over_opponents": 0.2875,
+ "per_opponent": {
+  "legacy:baselines/legacy_v1approx | grimmsnarl.csv": {
+   "games": 40,
+   "score": 0.2,
+   "ci95": [
+    0.10499864973166873,
+    0.34757607381856676
+   ],
+   "elo": -240.82399653118495,
+   "elo_ci": [
+    -372.2559905554839,
+    -109.39200250688599
+   ],
+   "W": 8,
+   "L": 32,
+   "D": 0,
+   "errors": 0,
+   "sprt_llr": -3.4618272435532975,
+   "sprt": "H0 accepted (<=0)",
+   "sec_per_move_a": 0.005099589862606159
+  },
+  "legacy:baselines/legacy_latest | hydrapple.csv": {
+   "games": 40,
+   "score": 0.225,
+   "ci95": [
+    0.12315953254678531,
+    0.3750339640409305
+   ],
+   "elo": -214.84767375797915,
+   "elo_ci": [
+    -340.9810212218832,
+    -88.71432629407501
+   ],
+   "W": 9,
+   "L": 31,
+   "D": 0,
+   "errors": 0,
+   "sprt_llr": -2.9294673373265425,
+   "sprt": "continue",
+   "sec_per_move_a": 0.004912049792138847
+  },
+  "policy:experiments/train_full_s0/best.pt | dragapult.csv": {
+   "games": 40,
+   "score": 0.3,
+   "ci95": [
+    0.18074670915695296,
+    0.454303106543204
+   ],
+   "elo": -147.19071411783779,
+   "elo_ci": [
+    -262.5391182795065,
+    -31.842309956168936
+   ],
+   "W": 12,
+   "L": 28,
+   "D": 0,
+   "errors": 0,
+   "sprt_llr": -1.817268527998477,
+   "sprt": "continue",
+   "sec_per_move_a": 0.0048246040370675276
+  },
+  "policy:experiments/train_full_s0/best.pt | ogerpon.csv": {
+   "games": 40,
+   "score": 0.2,
+   "ci95": [
+    0.10499864973166873,
+    0.34757607381856676
+   ],
+   "elo": -240.82399653118495,
+   "elo_ci": [
+    -372.2559905554839,
+    -109.39200250688599
+   ],
+   "W": 8,
+   "L": 32,
+   "D": 0,
+   "errors": 0,
+   "sprt_llr": -3.4618272435532975,
+   "sprt": "H0 accepted (<=0)",
+   "sec_per_move_a": 0.004704363349012889
+  },
+  "policy:experiments/train_full_s0/best.pt | clefairy.csv": {
+   "games": 40,
+   "score": 0.6,
+   "ci95": [
+    0.44595619827393507,
+    0.7365188938759865
+   ],
+   "elo": 70.43650362227247,
+   "elo_ci": [
+    -37.700758459811844,
+    178.57376570435682
+   ],
+   "W": 24,
+   "L": 16,
+   "D": 0,
+   "errors": 0,
+   "sprt_llr": 0.5632146391119282,
+   "sprt": "continue",
+   "sec_per_move_a": 0.004703120863092721
+  },
+  "policy:experiments/train_full_s0/best.pt | other_top.csv": {
+   "games": 40,
+   "score": 0.2,
+   "ci95": [
+    0.10499864973166873,
+    0.34757607381856676
+   ],
+   "elo": -240.82399653118495,
+   "elo_ci": [
+    -372.2559905554839,
+    -109.39200250688599
+   ],
+   "W": 8,
+   "L": 32,
+   "D": 0,
+   "errors": 0,
+   "sprt_llr": -3.4618272435532975,
+   "sprt": "H0 accepted (<=0)",
+   "sec_per_move_a": 0.004186774245563246
+  }
+ },
+ "minutes": 0.6911121646563212
+}

@@ -1,0 +1,15 @@
+{
+ "init": "experiments/train_full_s0_v/best.pt",
+ "name": "exit2",
+ "selfplay": "data/exit2",
+ "shards": "data/shards",
+ "epochs": 3,
+ "bs": 512,
+ "lr": 0.00015,
+ "w_value": 0.25,
+ "w_count": 0.2,
+ "w_belief": 0.05,
+ "loser_weight": 0.5,
+ "w_sp": 1.0,
+ "w_sp_pol": 1.0
+}

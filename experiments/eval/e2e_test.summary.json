@@ -1,0 +1,24 @@
+{
+ "games": 4,
+ "score": 0.5,
+ "ci95": [
+  0.15003570882017145,
+  0.8499642911798285
+ ],
+ "elo": -0.0,
+ "elo_ci": [
+  -301.28241843244064,
+  301.28241843244064
+ ],
+ "W": 2,
+ "L": 2,
+ "D": 0,
+ "errors": 0,
+ "sprt_llr": -0.014837781880793937,
+ "sprt": "continue",
+ "sec_per_move_a": 0.938095950787524,
+ "a": "legacy:submission/out_test",
+ "b": "legacy:baselines/legacy_v1approx",
+ "deck_a": "decks/dragapult.csv",
+ "deck_b": null
+}

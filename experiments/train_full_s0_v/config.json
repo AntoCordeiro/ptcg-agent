@@ -1,0 +1,14 @@
+{
+ "init": "experiments/train_full_s0/best.pt",
+ "name": "full_s0_v",
+ "selfplay": "data/selfplay",
+ "shards": "data/shards",
+ "epochs": 3,
+ "bs": 512,
+ "lr": 0.00015,
+ "w_value": 0.25,
+ "w_count": 0.2,
+ "w_belief": 0.05,
+ "loser_weight": 0.5,
+ "w_sp": 1.0
+}

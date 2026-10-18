@@ -1,0 +1,27 @@
+# data (regenerable / large)
+data/
+# competition engine + dataset: license forbids redistribution (download from Kaggle)
+cg/
+the-pokemon-company-ptcg-ai-battle-challenge-playground/
+# checkpoints and build outputs
+*.pt
+*.npz
+*.tar.gz
+submission/*/
+baselines/
+_archive/
+experiments/train_*crashed*/
+experiments/train_*partial*/
+experiments/train_smoke/
+# runner state
+jobs/queue/
+jobs/running/
+jobs/done/
+jobs/kill/
+jobs/logs/
+jobs/heartbeat.json
+jobs/runner.log
+_sync/
+__pycache__/
+*.pyc
+.vscode/

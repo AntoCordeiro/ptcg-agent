@@ -1,0 +1,24 @@
+{
+ "games": 400,
+ "score": 0.47875,
+ "ci95": [
+  0.4302294029243383,
+  0.5276748843011481
+ ],
+ "elo": -14.774912402053875,
+ "elo_ci": [
+  -48.799978389636564,
+  19.250153585528686
+ ],
+ "W": 190,
+ "L": 207,
+ "D": 3,
+ "errors": 0,
+ "sprt_llr": -2.9757318210946644,
+ "sprt": "H0 accepted (<=0)",
+ "sec_per_move_a": 0.3775603632006684,
+ "a": "mcts:experiments/train_full_s0_v/best.pt:sims=64,worlds=4,belief=learned",
+ "b": "mcts:experiments/train_full_s0_v/best.pt:sims=64,worlds=4,belief=uniform",
+ "deck_a": "decks/other_top.csv",
+ "deck_b": "decks/other_top.csv"
+}

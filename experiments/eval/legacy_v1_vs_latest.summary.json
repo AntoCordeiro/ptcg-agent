@@ -1,0 +1,24 @@
+{
+ "games": 400,
+ "score": 0.31,
+ "ci95": [
+  0.26666296102378073,
+  0.3569518424040979
+ ],
+ "elo": -138.9949587611931,
+ "elo_ci": [
+  -175.7363693790045,
+  -102.25354814338164
+ ],
+ "W": 124,
+ "L": 276,
+ "D": 0,
+ "errors": 0,
+ "sprt_llr": -17.03598850260848,
+ "sprt": "H0 accepted (<=0)",
+ "sec_per_move_a": 0.039480549262540944,
+ "a": "legacy:baselines/legacy_v1approx",
+ "b": "legacy:baselines/legacy_latest",
+ "deck_a": "decks/grimmsnarl.csv",
+ "deck_b": "decks/hydrapple.csv"
+}

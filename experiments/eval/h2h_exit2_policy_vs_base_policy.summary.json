@@ -1,0 +1,24 @@
+{
+ "games": 400,
+ "score": 0.5025,
+ "ci95": [
+  0.4537104387832727,
+  0.5512419980137288
+ ],
+ "elo": 1.7371924043128417,
+ "elo_ci": [
+  -32.257652168228546,
+  35.73203697685424
+ ],
+ "W": 200,
+ "L": 198,
+ "D": 2,
+ "errors": 0,
+ "sprt_llr": -1.3181358526501166,
+ "sprt": "continue",
+ "sec_per_move_a": 0.005465441486013617,
+ "a": "policy:experiments/train_exit2/last.pt",
+ "b": "policy:experiments/train_full_s0_v/best.pt",
+ "deck_a": "decks/other_top.csv",
+ "deck_b": "decks/other_top.csv"
+}

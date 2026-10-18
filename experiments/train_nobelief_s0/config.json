@@ -1,0 +1,20 @@
+{
+ "name": "nobelief_s0",
+ "shards": "data/shards",
+ "epochs": 12,
+ "bs": 512,
+ "lr": 0.0004,
+ "wd": 0.05,
+ "d": 192,
+ "layers": 4,
+ "heads": 6,
+ "ff": 512,
+ "no_belief": true,
+ "w_value": 0.25,
+ "w_count": 0.2,
+ "w_belief": 0.05,
+ "loser_weight": 0.5,
+ "seed": 0,
+ "max_train": null,
+ "gpu_data": true
+}
